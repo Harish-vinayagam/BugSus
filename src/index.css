@@ -303,6 +303,112 @@
   box-shadow: var(--crt-glow-accent), inset 0 0 20px rgba(0, 255, 170, 0.05);
 }
 
+/* ===== CRT TV TURN-ON INTRO ===== */
+
+/* The phosphor "tube" that flashes and expands */
+.crt-tube {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #ffffff;
+  box-shadow: 0 0 60px 20px #33ff33, 0 0 120px 40px #33ff3366;
+  will-change: height, opacity, filter;
+  z-index: 1;
+}
+
+/* Phase: flash — single bright 2px line */
+.crt-tube-flash {
+  height: 2px;
+  opacity: 1;
+  filter: brightness(20);
+  animation: tube-flash 0.12s ease-out forwards;
+}
+
+@keyframes tube-flash {
+  0%   { opacity: 0; height: 2px; filter: brightness(30); }
+  60%  { opacity: 1; height: 3px; filter: brightness(20); }
+  100% { opacity: 1; height: 2px; filter: brightness(15); }
+}
+
+/* Phase: expand — line grows to full screen */
+.crt-tube-expand {
+  height: 2px;
+  opacity: 1;
+  animation: tube-expand 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes tube-expand {
+  0%   { height: 2px;   filter: brightness(15) blur(4px); background: #ffffff; }
+  15%  { height: 4px;   filter: brightness(12) blur(3px); background: #ccffcc; }
+  50%  { height: 40vh;  filter: brightness(4)  blur(1px); background: #0b0f0b; }
+  80%  { height: 100vh; filter: brightness(2)  blur(0px); background: #0b0f0b; }
+  100% { height: 100vh; filter: brightness(1.2);          background: #0b0f0b; }
+}
+
+/* Phase: stabilise — hold at full size, brightness settles */
+.crt-tube-stabilise {
+  height: 100vh;
+  opacity: 1;
+  background: #0b0f0b;
+  filter: brightness(1);
+  animation: tube-stabilise 0.4s ease-out forwards;
+}
+
+@keyframes tube-stabilise {
+  0%   { filter: brightness(1.4); opacity: 1; }
+  60%  { filter: brightness(1.1); opacity: 1; }
+  100% { filter: brightness(1);   opacity: 1; }
+}
+
+/* Phase: flicker — rapid brightness jitter before final fadeout */
+.crt-tube-flicker {
+  height: 100vh;
+  background: #0b0f0b;
+  animation: tube-flicker 0.35s steps(1) forwards;
+}
+
+@keyframes tube-flicker {
+  0%   { opacity: 1;   filter: brightness(1.3); }
+  15%  { opacity: 0.7; filter: brightness(0.6); }
+  30%  { opacity: 1;   filter: brightness(1.5); }
+  45%  { opacity: 0.8; filter: brightness(0.8); }
+  60%  { opacity: 1;   filter: brightness(1.2); }
+  75%  { opacity: 0.9; filter: brightness(1.0); }
+  100% { opacity: 1;   filter: brightness(1.0); }
+}
+
+/* Static noise burst overlay during flicker */
+.crt-intro-static {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.18;
+  mix-blend-mode: screen;
+  animation: static-burst 0.35s steps(4) forwards;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+@keyframes static-burst {
+  0%   { opacity: 0.22; transform: translate(0, 0); }
+  25%  { opacity: 0.15; transform: translate(-10px, 5px); }
+  50%  { opacity: 0.25; transform: translate(8px, -4px); }
+  75%  { opacity: 0.10; transform: translate(-6px, 8px); }
+  100% { opacity: 0;    transform: translate(0, 0); }
+}
+
+/* Final fade-out of the overlay */
+.crt-intro-fadeout {
+  animation: intro-fadeout 0.35s ease-in forwards;
+}
+
+@keyframes intro-fadeout {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* ASCII box */
 .ascii-box {
   border: 1px solid var(--crt-dim);

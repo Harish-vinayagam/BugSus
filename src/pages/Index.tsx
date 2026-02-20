@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import CRTFrame from '@/components/CRTFrame';
+import CRTIntro from '@/components/CRTIntro';
 import BootScreen from '@/components/BootScreen';
 import CreateJoinScreen from '@/components/CreateJoinScreen';
 import LobbyScreen from '@/components/LobbyScreen';
@@ -23,6 +24,7 @@ type Screen =
 const ALL_PLAYERS = ['', 'CIPHER', 'NULLPTR', 'STACK0F'];
 
 const Index = () => {
+  const [introComplete, setIntroComplete] = useState(false);
   const [screen, setScreen] = useState<Screen>('boot');
   const [playerName, setPlayerName] = useState('');
   const [roomCode, setRoomCode] = useState('');
@@ -95,7 +97,9 @@ const Index = () => {
   }, []);
 
   return (
-    <CRTFrame>
+    <>
+      {!introComplete && <CRTIntro onComplete={() => setIntroComplete(true)} />}
+      <CRTFrame>
       {screen === 'boot' && <BootScreen onSelect={handleBootSelect} />}
       {(screen === 'create' || screen === 'join') && (
         <CreateJoinScreen
@@ -142,6 +146,7 @@ const Index = () => {
         />
       )}
     </CRTFrame>
+    </>
   );
 };
 
