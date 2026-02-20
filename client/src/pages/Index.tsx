@@ -7,6 +7,7 @@ import LobbyScreen from '@/components/LobbyScreen';
 import CategoryVoteScreen from '@/components/CategoryVoteScreen';
 import RoleRevealScreen from '@/components/RoleRevealScreen';
 import MainGameScreen from '@/components/MainGameScreen';
+import EmergencyScreen from '@/components/EmergencyScreen';
 import MeetingScreen from '@/components/MeetingScreen';
 import FinalScreen from '@/components/FinalScreen';
 
@@ -18,6 +19,7 @@ type Screen =
   | 'category'
   | 'role'
   | 'game'
+  | 'emergency'
   | 'meeting'
   | 'final';
 
@@ -33,6 +35,7 @@ const Index = () => {
   const [round, setRound] = useState(1);
   const [winner, setWinner] = useState<'engineers' | 'intern'>('engineers');
   const [alivePlayers, setAlivePlayers] = useState<string[]>([]);
+  const [emergencyTrigger, setEmergencyTrigger] = useState<'button' | 'timer'>('button');
 
   const handleBootSelect = useCallback((mode: 'create' | 'join') => {
     setScreen(mode === 'create' ? 'create' : 'join');
@@ -62,10 +65,16 @@ const Index = () => {
   }, [playerName]);
 
   const handleEmergency = useCallback(() => {
-    setScreen('meeting');
+    setEmergencyTrigger('button');
+    setScreen('emergency');
   }, []);
 
   const handleTimerEnd = useCallback(() => {
+    setEmergencyTrigger('timer');
+    setScreen('emergency');
+  }, []);
+
+  const handleEmergencyComplete = useCallback(() => {
     setScreen('meeting');
   }, []);
 
@@ -129,6 +138,12 @@ const Index = () => {
           role={role}
           onEmergency={handleEmergency}
           onTimerEnd={handleTimerEnd}
+        />
+      )}
+      {screen === 'emergency' && (
+        <EmergencyScreen
+          trigger={emergencyTrigger}
+          onComplete={handleEmergencyComplete}
         />
       )}
       {screen === 'meeting' && (

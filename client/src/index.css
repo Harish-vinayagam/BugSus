@@ -208,6 +208,12 @@
   to { width: 100%; }
 }
 
+/* Emergency terminal line fade-in */
+@keyframes fadeInLine {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
 /* Screen turn on */
 @keyframes screen-on {
   0% {
