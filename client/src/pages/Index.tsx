@@ -10,6 +10,8 @@ import MainGameScreen from '@/components/MainGameScreen';
 import EmergencyScreen from '@/components/EmergencyScreen';
 import MeetingScreen from '@/components/MeetingScreen';
 import FinalScreen from '@/components/FinalScreen';
+import { getTasksForCategory } from '@/data/tasks';
+import type { Task } from '@/types/task';
 
 type Screen =
   | 'boot'
@@ -36,6 +38,7 @@ const Index = () => {
   const [winner, setWinner] = useState<'engineers' | 'intern'>('engineers');
   const [alivePlayers, setAlivePlayers] = useState<string[]>([]);
   const [emergencyTrigger, setEmergencyTrigger] = useState<'button' | 'timer'>('button');
+  const [roundTasks, setRoundTasks] = useState<Task[]>([]);
 
   const handleBootSelect = useCallback((mode: 'create' | 'join') => {
     setScreen(mode === 'create' ? 'create' : 'join');
@@ -53,6 +56,7 @@ const Index = () => {
 
   const handleCategoryComplete = useCallback((cat: string) => {
     setCategory(cat);
+    setRoundTasks(getTasksForCategory(cat));
     // Randomly assign role (75% engineer, 25% intern)
     setRole(Math.random() < 0.75 ? 'engineer' : 'intern');
     setScreen('role');
@@ -136,6 +140,7 @@ const Index = () => {
           round={round}
           category={category}
           role={role}
+          tasks={roundTasks}
           onEmergency={handleEmergency}
           onTimerEnd={handleTimerEnd}
         />
