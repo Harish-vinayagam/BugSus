@@ -1,4 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import type { Task } from '@/types/task';
+import { TASKS } from '@/data/tasks';
+import { validateTask } from '@/utils/validateTask';
+import CodeEditor from '@/components/editor/CodeEditor';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface MainGameScreenProps {
   playerName: string;
@@ -9,75 +15,21 @@ interface MainGameScreenProps {
   onTimerEnd: () => void;
 }
 
-const PLAYERS_DATA = [
-  { name: '', status: 'ALIVE' as const },
-  { name: 'CIPHER', status: 'ALIVE' as const },
-  { name: 'NULLPTR', status: 'ALIVE' as const },
-  { name: 'STACK0F', status: 'ALIVE' as const },
-];
+type SubmitStatus = 'idle' | 'correct' | 'incorrect';
 
-const CODE_SNIPPETS: Record<string, string[]> = {
-  FRONTEND: [
-    'function renderComponent(props) {',
-    '  const [state, setState] = useState(null);',
-    '  useEffect(() => {',
-    '    fetchData().then(setState);',
-    '  }, []);',
-    '  return (',
-    '    <div className="container">',
-    '      {state?.map(item => (',
-    '        <Card key={item.id} data={item} />',
-    '      ))}',
-    '    </div>',
-    '  );',
-    '}',
-  ],
-  BACKEND: [
-    'async function handleRequest(req, res) {',
-    '  try {',
-    '    const user = await auth.verify(req.token);',
-    '    const data = await db.query(',
-    '      "SELECT * FROM tasks WHERE user_id = $1",',
-    '      [user.id]',
-    '    );',
-    '    res.json({ status: "ok", data });',
-    '  } catch (err) {',
-    '    res.status(500).json({ error: err.message });',
-    '  }',
-    '}',
-  ],
-  OOPS: [
-    'class TaskManager {',
-    '  constructor() {',
-    '    this.tasks = new Map();',
-    '    this.observers = [];',
-    '  }',
-    '  addTask(task) {',
-    '    this.tasks.set(task.id, task);',
-    '    this.notify("TASK_ADDED", task);',
-    '  }',
-    '  subscribe(observer) {',
-    '    this.observers.push(observer);',
-    '  }',
-    '}',
-  ],
-  DSA: [
-    'function mergeSort(arr) {',
-    '  if (arr.length <= 1) return arr;',
-    '  const mid = Math.floor(arr.length / 2);',
-    '  const left = mergeSort(arr.slice(0, mid));',
-    '  const right = mergeSort(arr.slice(mid));',
-    '  return merge(left, right);',
-    '}',
-    'function merge(a, b) {',
-    '  const result = [];',
-    '  while (a.length && b.length) {',
-    '    result.push(a[0]<b[0] ? a.shift() : b.shift());',
-    '  }',
-    '  return [...result, ...a, ...b];',
-    '}',
-  ],
-};
+interface PlayerEntry {
+  name: string;
+  status: 'ALIVE' | 'EJECTED';
+}
+
+// ── Static data ───────────────────────────────────────────────────────────────
+
+const PLAYERS_DATA: PlayerEntry[] = [
+  { name: '', status: 'ALIVE' },
+  { name: 'CIPHER', status: 'ALIVE' },
+  { name: 'NULLPTR', status: 'ALIVE' },
+  { name: 'STACK0F', status: 'ALIVE' },
+];
 
 const CHAT_MESSAGES = [
   { user: 'CIPHER', text: 'ANYONE NOTICE ANYTHING SUS?' },
@@ -87,14 +39,16 @@ const CHAT_MESSAGES = [
   { user: 'NULLPTR', text: 'I SAW SOMEONE NEAR THE SERVER ROOM' },
 ];
 
-const TASK_LIST = [
-  { id: 1, label: 'FIX MEMORY LEAK IN useEffect()', done: false },
-  { id: 2, label: 'REFACTOR AUTH MIDDLEWARE', done: false },
-  { id: 3, label: 'WRITE UNIT TESTS FOR /api/users', done: false },
-  { id: 4, label: 'PATCH SQL INJECTION IN QUERY BUILDER', done: false },
-  { id: 5, label: 'UPDATE DEPENDENCY VERSIONS', done: false },
-  { id: 6, label: 'RESOLVE MERGE CONFLICT IN main', done: false },
-];
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Returns the first task from TASKS that hasn't been completed yet.
+ * Returns null when all tasks are done.
+ */
+const getNextTask = (completedIds: string[]): Task | null =>
+  TASKS.find((t) => !completedIds.includes(t.id)) ?? null;
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 const MainGameScreen: React.FC<MainGameScreenProps> = ({
   playerName,
@@ -104,17 +58,24 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   onEmergency,
   onTimerEnd,
 }) => {
+  // ── Task state ──────────────────────────────────────────────────────────────
+  const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([]);
+  const [currentTask, setCurrentTask] = useState<Task | null>(() => getNextTask([]));
+  const [editorCode, setEditorCode] = useState<string>(
+    () => getNextTask([])?.starterCode ?? ''
+  );
+  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
+
+  // ── Game / UI state ─────────────────────────────────────────────────────────
   const [timer, setTimer] = useState(60);
   const [chatMessages, setChatMessages] = useState<{ user: string; text: string }[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const [currentLine, setCurrentLine] = useState(0);
-  const [showTasks, setShowTasks] = useState(false);
-  const [tasks, setTasks] = useState(TASK_LIST);
-  const [players, setPlayers] = useState(() =>
+  const [players] = useState<PlayerEntry[]>(() =>
     PLAYERS_DATA.map((p) => ({ ...p, name: p.name || playerName }))
   );
   const chatRef = useRef<HTMLDivElement>(null);
 
+  // ── Timer ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     const interval = setInterval(() => {
       setTimer((t) => {
@@ -127,59 +88,93 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [onTimerEnd]);
 
-  // Simulate code typing
+  // ── Simulated incoming chat ─────────────────────────────────────────────────
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentLine((l) => {
-        const lines = CODE_SNIPPETS[category] || CODE_SNIPPETS.FRONTEND;
-        return l < lines.length - 1 ? l + 1 : l;
-      });
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [category]);
-
-  // Simulate chat
-  useEffect(() => {
-    CHAT_MESSAGES.forEach((msg, i) => {
+    const timers = CHAT_MESSAGES.map((msg, i) =>
       setTimeout(() => {
         setChatMessages((m) => [...m, msg]);
-      }, 5000 + i * 8000);
-    });
+      }, 5000 + i * 8000)
+    );
+    return () => timers.forEach(clearTimeout);
   }, []);
 
   useEffect(() => {
     chatRef.current?.scrollTo(0, chatRef.current.scrollHeight);
   }, [chatMessages]);
 
-  const sendChat = () => {
+  // ── Task handlers ───────────────────────────────────────────────────────────
+
+  const handleEditorChange = useCallback((value: string) => {
+    setEditorCode(value);
+    // Clear feedback as soon as the player edits
+    setSubmitStatus('idle');
+  }, []);
+
+  const handleSubmit = useCallback(() => {
+    if (!currentTask) return;
+
+    const isCorrect = validateTask(editorCode, currentTask.solution);
+
+    if (isCorrect) {
+      const nextCompleted = [...completedTaskIds, currentTask.id];
+      setCompletedTaskIds(nextCompleted);
+      setSubmitStatus('correct');
+
+      const next = getNextTask(nextCompleted);
+      // Short delay so the player sees the ✓ feedback before the next task loads
+      setTimeout(() => {
+        setCurrentTask(next);
+        setEditorCode(next?.starterCode ?? '');
+        setSubmitStatus('idle');
+      }, 1000);
+    } else {
+      setSubmitStatus('incorrect');
+    }
+  }, [currentTask, editorCode, completedTaskIds]);
+
+  const handleChatSend = useCallback(() => {
     if (!chatInput.trim()) return;
-    setChatMessages((m) => [...m, { user: playerName, text: chatInput.toUpperCase() }]);
+    setChatMessages((m) => [
+      ...m,
+      { user: playerName, text: chatInput.toUpperCase() },
+    ]);
     setChatInput('');
-  };
+  }, [chatInput, playerName]);
 
-  const lines = CODE_SNIPPETS[category] || CODE_SNIPPETS.FRONTEND;
+  // ── Derived ─────────────────────────────────────────────────────────────────
+  const allTasksDone = currentTask === null;
+  const taskProgress = `${completedTaskIds.length}/${TASKS.length}`;
 
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="h-full flex flex-col font-mono text-sm">
-      {/* Top bar */}
-      <div className="flex items-center justify-between mb-3 pb-2" style={{ borderBottom: '1px solid var(--crt-dim)' }}>
+
+      {/* ── Top bar ── */}
+      <div
+        className="flex items-center justify-between mb-3 pb-2"
+        style={{ borderBottom: '1px solid var(--crt-dim)' }}
+      >
         <span className="crt-glow font-terminal text-lg">
           ROUND {round}/3 — {category}
         </span>
         <span className={`font-terminal text-xl ${timer <= 10 ? 'crt-glow-red' : 'crt-glow'}`}>
           {Math.floor(timer / 60)}:{String(timer % 60).padStart(2, '0')}
         </span>
-        <button className="crt-button crt-button-red text-xs px-3 py-1" onClick={onEmergency}>
+        <button
+          className="crt-button crt-button-red text-xs px-3 py-1"
+          onClick={onEmergency}
+        >
           ⚠ EMERGENCY_MEETING
         </button>
       </div>
 
-      {/* 3-column layout */}
+      {/* ── 3-column layout ── */}
       <div className="flex gap-3 flex-1 min-h-0">
-        {/* LEFT: Players */}
-        <div className="w-44 flex-shrink-0">
+
+        {/* ── LEFT: Crew ── */}
+        <div className="w-44 flex-shrink-0 flex flex-col">
           <p className="font-terminal mb-2" style={{ color: 'var(--crt-dim)' }}>
             ┌─ CREW ─┐
           </p>
@@ -196,96 +191,132 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
                 <p className={`font-terminal ${p.name === playerName ? 'crt-glow-accent' : 'crt-glow'}`}>
                   {p.name}
                 </p>
-                <p className="text-xs" style={{ color: p.status === 'ALIVE' ? 'var(--crt-dim)' : 'var(--crt-red)' }}>
+                <p
+                  className="text-xs"
+                  style={{ color: p.status === 'ALIVE' ? 'var(--crt-dim)' : 'var(--crt-red)' }}
+                >
                   [{p.status}]
                 </p>
               </div>
             ))}
           </div>
           <div className="mt-3 text-xs" style={{ color: 'var(--crt-dim)' }}>
-            <p>ROLE: <span className={role === 'engineer' ? 'crt-glow' : 'crt-glow-red'}>{role.toUpperCase()}</span></p>
+            <p>
+              ROLE:{' '}
+              <span className={role === 'engineer' ? 'crt-glow' : 'crt-glow-red'}>
+                {role.toUpperCase()}
+              </span>
+            </p>
+          </div>
+
+          {/* Task progress summary */}
+          <div
+            className="mt-auto pt-3 text-xs"
+            style={{ color: 'var(--crt-dim)', borderTop: '1px solid var(--crt-dim)' }}
+          >
+            <p className="font-terminal mb-1">┌─ TASKS ─┐</p>
+            {TASKS.map((t) => {
+              const done = completedTaskIds.includes(t.id);
+              const active = currentTask?.id === t.id;
+              return (
+                <div key={t.id} className="flex items-center gap-1 py-0.5">
+                  <span style={{ color: done ? 'var(--crt-green)' : active ? 'var(--crt-accent)' : 'var(--crt-dim)' }}>
+                    {done ? '[✓]' : active ? '[▶]' : '[ ]'}
+                  </span>
+                  <span
+                    className="truncate"
+                    style={{
+                      color: done ? 'var(--crt-dim)' : active ? 'var(--crt-accent)' : 'var(--crt-dim)',
+                      textDecoration: done ? 'line-through' : 'none',
+                      maxWidth: '110px',
+                    }}
+                    title={t.title}
+                  >
+                    {t.title}
+                  </span>
+                </div>
+              );
+            })}
+            <p className="mt-1 crt-glow">DONE: {taskProgress}</p>
           </div>
         </div>
 
-        {/* CENTER: Code editor */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <p className="font-terminal mb-2" style={{ color: 'var(--crt-dim)' }}>
-            ┌─ TERMINAL ─┐
-          </p>
-          <div
-            className="flex-1 ascii-box overflow-auto"
-            style={{ background: 'rgba(0,0,0,0.3)' }}
-          >
-            {lines.slice(0, currentLine + 1).map((line, i) => (
-              <div key={i} className="flex">
-                <span className="w-8 text-right mr-3 select-none" style={{ color: 'var(--crt-dim)' }}>
-                  {i + 1}
-                </span>
-                <span className={`crt-glow ${i === currentLine ? 'crt-cursor' : ''}`}>
-                  {line}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-2 flex items-center gap-2">
-            <span style={{ color: 'var(--crt-dim)' }}>PROGRESS:</span>
-            <div className="flex-1 h-2" style={{ border: '1px solid var(--crt-dim)' }}>
-              <div
-                className="h-full transition-all duration-500"
-                style={{
-                  width: `${((currentLine + 1) / lines.length) * 100}%`,
-                  background: 'var(--crt-green)',
-                  boxShadow: 'var(--crt-glow)',
-                }}
-              />
-            </div>
-            <span className="crt-glow text-xs">
-              {Math.round(((currentLine + 1) / lines.length) * 100)}%
-            </span>
-          </div>
-          <button
-            className="crt-button text-xs px-3 py-1 mt-2 w-full"
-            onClick={() => setShowTasks((v) => !v)}
-          >
-            {showTasks ? '▼ HIDE_TASKS' : '▶ VIEW_TASKS'}
-          </button>
-          {showTasks && (
+        {/* ── CENTER: Task + Monaco Editor ── */}
+        <div className="flex-1 flex flex-col min-w-0 gap-2">
+
+          {allTasksDone ? (
+            /* All tasks completed banner */
             <div
-              className="mt-2 ascii-box text-xs"
+              className="flex-1 ascii-box flex flex-col items-center justify-center gap-3"
               style={{ background: 'rgba(0,0,0,0.3)' }}
             >
-              <p className="font-terminal mb-1" style={{ color: 'var(--crt-dim)' }}>
-                ┌─ TASK_QUEUE ─┐
-              </p>
-              {tasks.map((t) => (
-                <div
-                  key={t.id}
-                  className="flex items-center gap-2 py-0.5 cursor-pointer"
-                  onClick={() =>
-                    setTasks((prev) =>
-                      prev.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x))
-                    )
-                  }
-                >
-                  <span style={{ color: t.done ? 'var(--crt-green)' : 'var(--crt-dim)' }}>
-                    [{t.done ? 'X' : ' '}]
-                  </span>
-                  <span
-                    className={t.done ? '' : 'crt-glow'}
-                    style={t.done ? { color: 'var(--crt-dim)', textDecoration: 'line-through' } : {}}
-                  >
-                    {t.label}
+              <p className="font-terminal text-2xl crt-glow-accent">ALL TASKS COMPLETE</p>
+              <p style={{ color: 'var(--crt-dim)' }}>Waiting for emergency meeting...</p>
+            </div>
+          ) : (
+            <>
+              {/* Task description panel */}
+              <div className="ascii-box p-3" style={{ background: 'rgba(0,0,0,0.3)' }}>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="font-terminal crt-glow-accent text-base">
+                    {currentTask?.title}
+                  </p>
+                  <span className="text-xs" style={{ color: 'var(--crt-dim)' }}>
+                    {taskProgress} COMPLETE
                   </span>
                 </div>
-              ))}
-              <p className="mt-1" style={{ color: 'var(--crt-dim)' }}>
-                COMPLETED: {tasks.filter((t) => t.done).length}/{tasks.length}
-              </p>
-            </div>
+                <pre
+                  className="text-xs whitespace-pre-wrap"
+                  style={{ color: 'var(--crt-dim)', lineHeight: 1.6 }}
+                >
+                  {currentTask?.description}
+                </pre>
+              </div>
+
+              {/* Monaco Editor */}
+              <div
+                className="flex-1 ascii-box overflow-hidden"
+                style={{ background: '#1e1e1e', minHeight: 0 }}
+              >
+                <p
+                  className="font-terminal text-xs px-2 py-1"
+                  style={{ color: 'var(--crt-dim)', borderBottom: '1px solid #333' }}
+                >
+                  ┌─ EDITOR ─┐
+                </p>
+                <div style={{ height: 'calc(100% - 28px)' }}>
+                  <CodeEditor
+                    value={editorCode}
+                    onChange={handleEditorChange}
+                    language="typescript"
+                  />
+                </div>
+              </div>
+
+              {/* Submit row */}
+              <div className="flex items-center gap-3">
+                <button
+                  className="crt-button crt-button-accent px-4 py-1 text-sm"
+                  onClick={handleSubmit}
+                >
+                  ▶ SUBMIT
+                </button>
+                {submitStatus === 'correct' && (
+                  <span className="crt-glow-accent text-sm font-terminal">
+                    ✓ CORRECT — LOADING NEXT TASK...
+                  </span>
+                )}
+                {submitStatus === 'incorrect' && (
+                  <span className="crt-glow-red text-sm font-terminal">
+                    ✗ INCORRECT — CHECK YOUR SOLUTION
+                  </span>
+                )}
+              </div>
+            </>
           )}
         </div>
 
-        {/* RIGHT: Chat */}
+        {/* ── RIGHT: Comms / Chat ── */}
         <div className="w-56 flex-shrink-0 flex flex-col">
           <p className="font-terminal mb-2" style={{ color: 'var(--crt-dim)' }}>
             ┌─ COMMS ─┐
@@ -301,7 +332,10 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
                   className="font-terminal"
                   style={{
                     color: msg.user === playerName ? 'var(--crt-accent)' : 'var(--crt-green)',
-                    textShadow: msg.user === playerName ? 'var(--crt-glow-accent)' : 'var(--crt-glow)',
+                    textShadow:
+                      msg.user === playerName
+                        ? 'var(--crt-glow-accent)'
+                        : 'var(--crt-glow)',
                   }}
                 >
                   {msg.user}:
@@ -318,7 +352,7 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
               type="text"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && sendChat()}
+              onKeyDown={(e) => e.key === 'Enter' && handleChatSend()}
               className="flex-1 bg-transparent outline-none crt-glow text-xs px-1"
               style={{
                 color: 'var(--crt-green)',
@@ -329,12 +363,13 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
             />
             <button
               className="crt-button text-xs px-2 py-0"
-              onClick={sendChat}
+              onClick={handleChatSend}
             >
               TX
             </button>
           </div>
         </div>
+
       </div>
     </div>
   );
