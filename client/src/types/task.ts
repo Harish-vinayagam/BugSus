@@ -17,6 +17,8 @@ export interface TestCase {
 export interface Task {
   id: string;
   category: TaskCategory;
+  /** Who this task is designed for */
+  forRole: 'engineer' | 'intern';
   title: string;
   description: string;
   starterCode: string;

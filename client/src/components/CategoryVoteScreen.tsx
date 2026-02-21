@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 
 interface CategoryVoteScreenProps {
+  round: number;
   onComplete: (category: string) => void;
 }
 
 const CATEGORIES = ['FRONTEND', 'BACKEND', 'OOPS', 'DSA'];
 
-const CategoryVoteScreen: React.FC<CategoryVoteScreenProps> = ({ onComplete }) => {
+const CategoryVoteScreen: React.FC<CategoryVoteScreenProps> = ({ round, onComplete }) => {
   const [timer, setTimer] = useState(15);
   const [votes, setVotes] = useState<Record<string, number>>({
     FRONTEND: 0,
@@ -57,6 +58,7 @@ const CategoryVoteScreen: React.FC<CategoryVoteScreenProps> = ({ onComplete }) =
   return (
     <div className="h-full flex flex-col items-center justify-center font-mono">
       <p className="crt-glow font-terminal text-2xl mb-2">SELECT CATEGORY</p>
+      <p className="font-terminal text-sm mb-1" style={{ color: 'var(--crt-dim)' }}>ROUND {round} / 3</p>
       <p className="crt-glow mb-8" style={{ color: 'var(--crt-dim)' }}>
         TIME REMAINING:{' '}
         <span

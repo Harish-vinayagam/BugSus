@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 
 interface RoleRevealScreenProps {
   role: 'engineer' | 'intern';
+  round: number;
   onComplete: () => void;
 }
 
-const RoleRevealScreen: React.FC<RoleRevealScreenProps> = ({ role, onComplete }) => {
+const RoleRevealScreen: React.FC<RoleRevealScreenProps> = ({ role, round, onComplete }) => {
   const [phase, setPhase] = useState<'glitch' | 'reveal' | 'done'>('glitch');
 
   useEffect(() => {
@@ -51,6 +52,11 @@ const RoleRevealScreen: React.FC<RoleRevealScreenProps> = ({ role, onComplete })
           >
             {isEngineer ? '🔧 ENGINEER' : '🐛 INTERN'}
           </p>
+          {round > 1 && (
+            <p className="font-terminal text-sm" style={{ color: 'var(--crt-dim)' }}>
+              ROUND {round} — ROLE UNCHANGED
+            </p>
+          )}
           <p
             className="font-mono text-lg"
             style={{ color: isEngineer ? 'var(--crt-dim)' : 'var(--crt-red)' }}

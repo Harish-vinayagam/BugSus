@@ -13,6 +13,7 @@ interface MainGameScreenProps {
   tasks: Task[];
   onEmergency: () => void;
   onTimerEnd: () => void;
+  onTasksCompleted: (count: number) => void;
 }
 
 type SubmitStatus = 'idle' | 'running' | 'correct' | 'incorrect';
@@ -49,6 +50,7 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   tasks,
   onEmergency,
   onTimerEnd,
+  onTasksCompleted,
 }) => {
   // ── Task state ──────────────────────────────────────────────────────────────
   const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([]);
@@ -140,6 +142,7 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
         const nextCompleted = [...completedTaskIds, currentTask.id];
         setCompletedTaskIds(nextCompleted);
         setSubmitStatus('correct');
+        onTasksCompleted(nextCompleted.length);
 
         setTimeout(() => {
           const nextIdx = currentTaskIdx + 1;
@@ -167,6 +170,7 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   // ── Derived ─────────────────────────────────────────────────────────────────
   const allTasksDone = currentTaskIdx >= tasks.length && tasks.length > 0;
   const taskProgress = `${completedTaskIds.length}/${tasks.length}`;
+  const isIntern = role === 'intern';
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -175,12 +179,13 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
       {/* ── Top bar ── */}
       <div
         className="flex items-center justify-between mb-3 pb-2"
-        style={{ borderBottom: '1px solid var(--crt-dim)' }}
+        style={{ borderBottom: `1px solid ${isIntern ? 'var(--crt-red)' : 'var(--crt-dim)'}` }}
       >
-        <span className="crt-glow font-terminal text-lg">
+        <span className={`font-terminal text-lg ${isIntern ? 'crt-glow-red' : 'crt-glow'}`}>
           ROUND {round}/3 — {category}
+          {isIntern && <span className="ml-2 text-sm" style={{ color: 'var(--crt-red)' }}>[ SABOTAGE MODE ]</span>}
         </span>
-        <span className={`font-terminal text-xl ${timer <= 30 ? 'crt-glow-red' : 'crt-glow'}`}>
+        <span className={`font-terminal text-xl ${timer <= 30 ? 'crt-glow-red' : isIntern ? 'crt-glow-red' : 'crt-glow'}`}>
           {Math.floor(timer / 60)}:{String(timer % 60).padStart(2, '0')}
         </span>
         <button
@@ -190,6 +195,21 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
           ⚠ EMERGENCY_MEETING
         </button>
       </div>
+
+      {/* ── Intern sabotage banner ── */}
+      {isIntern && (
+        <div
+          className="mb-3 px-3 py-2 text-xs font-terminal"
+          style={{
+            border: '1px solid var(--crt-red)',
+            color: 'var(--crt-red)',
+            textShadow: 'var(--crt-glow-red)',
+            background: 'rgba(255,51,51,0.06)',
+          }}
+        >
+          ██ DIRECTIVE ACTIVE ██ — Complete sabotage tasks without raising suspicion. Your solutions MUST pass all tests to be deployed.
+        </div>
+      )}
 
       {/* ── 3-column layout ── */}
       <div className="flex gap-3 flex-1 min-h-0">
@@ -221,20 +241,24 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
           </div>
 
           {/* Task progress list */}
-          <div className="mt-auto pt-3 text-xs overflow-auto" style={{ color: 'var(--crt-dim)', borderTop: '1px solid var(--crt-dim)' }}>
-            <p className="font-terminal mb-1">┌─ TASKS ─┐</p>
+          <div className="mt-auto pt-3 text-xs overflow-auto" style={{ color: 'var(--crt-dim)', borderTop: `1px solid ${isIntern ? 'var(--crt-red)' : 'var(--crt-dim)'}` }}>
+            <p className="font-terminal mb-1" style={{ color: isIntern ? 'var(--crt-red)' : undefined }}>
+              {isIntern ? '┌─ DIRECTIVES ─┐' : '┌─ TASKS ─┐'}
+            </p>
             {tasks.map((t, i) => {
               const done = completedTaskIds.includes(t.id);
               const active = i === currentTaskIdx;
+              const activeColor = isIntern ? 'var(--crt-red)' : 'var(--crt-accent)';
+              const doneColor = isIntern ? 'var(--crt-red)' : 'var(--crt-green)';
               return (
                 <div key={t.id} className="flex items-center gap-1 py-0.5">
-                  <span style={{ color: done ? 'var(--crt-green)' : active ? 'var(--crt-accent)' : 'var(--crt-dim)' }}>
+                  <span style={{ color: done ? doneColor : active ? activeColor : 'var(--crt-dim)' }}>
                     {done ? '[✓]' : active ? '[▶]' : '[ ]'}
                   </span>
                   <span
                     className="truncate"
                     style={{
-                      color: done ? 'var(--crt-dim)' : active ? 'var(--crt-accent)' : 'var(--crt-dim)',
+                      color: done ? 'var(--crt-dim)' : active ? activeColor : 'var(--crt-dim)',
                       textDecoration: done ? 'line-through' : 'none',
                       maxWidth: '110px',
                     }}
@@ -245,7 +269,9 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
                 </div>
               );
             })}
-            <p className="mt-1 crt-glow">DONE: {taskProgress}</p>
+            <p className="mt-1" style={{ color: isIntern ? 'var(--crt-red)' : 'var(--crt-green)', textShadow: isIntern ? 'var(--crt-glow-red)' : 'var(--crt-glow)' }}>
+              DONE: {taskProgress}
+            </p>
           </div>
         </div>
 
@@ -255,20 +281,32 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
           {allTasksDone ? (
             <div
               className="flex-1 ascii-box flex flex-col items-center justify-center gap-3"
-              style={{ background: 'rgba(0,0,0,0.3)' }}
+              style={{ background: 'rgba(0,0,0,0.3)', borderColor: isIntern ? 'var(--crt-red)' : undefined }}
             >
-              <p className="font-terminal text-2xl crt-glow-accent">ALL TASKS COMPLETE</p>
-              <p style={{ color: 'var(--crt-dim)' }}>Waiting for emergency meeting...</p>
+              <p className={`font-terminal text-2xl ${isIntern ? 'crt-glow-red' : 'crt-glow-accent'}`}>
+                {isIntern ? 'ALL DIRECTIVES COMPLETE' : 'ALL TASKS COMPLETE'}
+              </p>
+              <p style={{ color: 'var(--crt-dim)' }}>
+                {isIntern ? 'Sabotage deployed. Blend in...' : 'Waiting for emergency meeting...'}
+              </p>
             </div>
           ) : (
             <>
               {/* Task description */}
-              <div className="ascii-box p-3" style={{ background: 'rgba(0,0,0,0.3)' }}>
+              <div
+                className="ascii-box p-3"
+                style={{
+                  background: 'rgba(0,0,0,0.3)',
+                  borderColor: isIntern ? 'var(--crt-red)' : undefined,
+                }}
+              >
                 <div className="flex items-center justify-between mb-1">
-                  <p className="font-terminal crt-glow-accent text-base">{currentTask?.title}</p>
+                  <p className={`font-terminal text-base ${isIntern ? 'crt-glow-red' : 'crt-glow-accent'}`}>
+                    {currentTask?.title}
+                  </p>
                   <span className="text-xs" style={{ color: 'var(--crt-dim)' }}>{taskProgress} COMPLETE</span>
                 </div>
-                <pre className="text-xs whitespace-pre-wrap" style={{ color: 'var(--crt-dim)', lineHeight: 1.6 }}>
+                <pre className="text-xs whitespace-pre-wrap" style={{ color: isIntern ? '#ff555588' : 'var(--crt-dim)', lineHeight: 1.6 }}>
                   {currentTask?.description}
                 </pre>
               </div>
@@ -293,17 +331,21 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
               {/* Submit row */}
               <div className="flex items-center gap-3 flex-wrap">
                 <button
-                  className="crt-button crt-button-accent px-4 py-1 text-sm"
+                  className={`crt-button ${isIntern ? 'crt-button-red' : 'crt-button-accent'} px-4 py-1 text-sm`}
                   onClick={handleSubmit}
                   disabled={submitStatus === 'running' || submitStatus === 'correct'}
                 >
-                  {submitStatus === 'running' ? '⟳ RUNNING...' : '▶ SUBMIT'}
+                  {submitStatus === 'running' ? '⟳ RUNNING...' : isIntern ? '▶ DEPLOY' : '▶ SUBMIT'}
                 </button>
                 {submitStatus === 'correct' && (
-                  <span className="crt-glow-accent text-sm font-terminal">✓ ALL TESTS PASSED — NEXT TASK...</span>
+                  <span className={`text-sm font-terminal ${isIntern ? 'crt-glow-red' : 'crt-glow-accent'}`}>
+                    {isIntern ? '✓ SABOTAGE DEPLOYED — NEXT DIRECTIVE...' : '✓ ALL TESTS PASSED — NEXT TASK...'}
+                  </span>
                 )}
                 {submitStatus === 'incorrect' && (
-                  <span className="crt-glow-red text-sm font-terminal">✗ TESTS FAILED — SEE RESULTS BELOW</span>
+                  <span className="crt-glow-red text-sm font-terminal">
+                    {isIntern ? '✗ DEPLOY FAILED — FIX YOUR CODE' : '✗ TESTS FAILED — SEE RESULTS BELOW'}
+                  </span>
                 )}
               </div>
 
@@ -311,9 +353,15 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
               {testResults.length > 0 && (
                 <div
                   className="ascii-box p-2 text-xs space-y-1 overflow-auto"
-                  style={{ background: 'rgba(0,0,0,0.4)', maxHeight: '130px' }}
+                  style={{
+                    background: 'rgba(0,0,0,0.4)',
+                    maxHeight: '130px',
+                    borderColor: isIntern ? 'var(--crt-red)' : undefined,
+                  }}
                 >
-                  <p className="font-terminal mb-1" style={{ color: 'var(--crt-dim)' }}>┌─ TEST RESULTS ─┐</p>
+                  <p className="font-terminal mb-1" style={{ color: 'var(--crt-dim)' }}>
+                    {isIntern ? '┌─ DEPLOY RESULTS ─┐' : '┌─ TEST RESULTS ─┐'}
+                  </p>
                   {testResults.map((r, i) => (
                     <div key={i} className="flex items-start gap-2">
                       <span style={{ color: r.passed ? 'var(--crt-green)' : 'var(--crt-red)', flexShrink: 0 }}>
