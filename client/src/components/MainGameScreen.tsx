@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Task } from '@/types/task';
 import { validateTask, type TestResult } from '@/utils/validateTask';
 import CodeEditor from '@/components/editor/CodeEditor';
+import type { Player } from '../../../shared/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -11,34 +12,14 @@ interface MainGameScreenProps {
   category: string;
   role: 'engineer' | 'intern';
   tasks: Task[];
+  players: Player[];                       // live from socket
+  taskProgress: Record<string, number>;    // username → completed count
   onEmergency: () => void;
   onTimerEnd: () => void;
   onTasksCompleted: (count: number) => void;
 }
 
 type SubmitStatus = 'idle' | 'running' | 'correct' | 'incorrect';
-
-interface PlayerEntry {
-  name: string;
-  status: 'ALIVE' | 'EJECTED';
-}
-
-// ── Static data ───────────────────────────────────────────────────────────────
-
-const PLAYERS_DATA: PlayerEntry[] = [
-  { name: '', status: 'ALIVE' },
-  { name: 'CIPHER', status: 'ALIVE' },
-  { name: 'NULLPTR', status: 'ALIVE' },
-  { name: 'STACK0F', status: 'ALIVE' },
-];
-
-const CHAT_MESSAGES = [
-  { user: 'CIPHER', text: 'ANYONE NOTICE ANYTHING SUS?' },
-  { user: 'NULLPTR', text: 'ALL CLEAR ON MY END' },
-  { user: 'STACK0F', text: 'FOCUS ON TASKS PEOPLE' },
-  { user: 'CIPHER', text: 'STACK0F IS QUIET...' },
-  { user: 'NULLPTR', text: 'I SAW SOMEONE NEAR THE SERVER ROOM' },
-];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -48,6 +29,8 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   category,
   role,
   tasks,
+  players,
+  taskProgress,
   onEmergency,
   onTimerEnd,
   onTasksCompleted,
@@ -67,9 +50,6 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   const [timer, setTimer] = useState(180);
   const [chatMessages, setChatMessages] = useState<{ user: string; text: string }[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const [players] = useState<PlayerEntry[]>(() =>
-    PLAYERS_DATA.map((p) => ({ ...p, name: p.name || playerName }))
-  );
   const chatRef = useRef<HTMLDivElement>(null);
 
   // Reset task state when tasks list changes (new round / category)
@@ -107,12 +87,8 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   }, [onTimerEnd]);
 
   // ── Simulated incoming chat ─────────────────────────────────────────────────
-  useEffect(() => {
-    const timers = CHAT_MESSAGES.map((msg, i) =>
-      setTimeout(() => setChatMessages((m) => [...m, msg]), 5000 + i * 8000)
-    );
-    return () => timers.forEach(clearTimeout);
-  }, []);
+  // (No fake bots — real players type in the chat input)
+
 
   useEffect(() => {
     chatRef.current?.scrollTo(0, chatRef.current.scrollHeight);
@@ -169,7 +145,6 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
 
   // ── Derived ─────────────────────────────────────────────────────────────────
   const allTasksDone = currentTaskIdx >= tasks.length && tasks.length > 0;
-  const taskProgress = `${completedTaskIds.length}/${tasks.length}`;
   const isIntern = role === 'intern';
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -218,21 +193,26 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
         <div className="w-44 flex-shrink-0 flex flex-col">
           <p className="font-terminal mb-2" style={{ color: 'var(--crt-dim)' }}>┌─ CREW ─┐</p>
           <div className="space-y-2">
-            {players.map((p, i) => (
+            {players.map((p) => (
               <div
-                key={i}
+                key={p.id}
                 className="ascii-box py-1 px-2"
                 style={{
-                  borderColor: p.status === 'ALIVE' ? 'var(--crt-dim)' : 'transparent',
-                  opacity: p.status === 'ALIVE' ? 1 : 0.3,
+                  borderColor: p.alive ? 'var(--crt-dim)' : 'transparent',
+                  opacity: p.alive ? 1 : 0.3,
                 }}
               >
-                <p className={`font-terminal ${p.name === playerName ? 'crt-glow-accent' : 'crt-glow'}`}>
-                  {p.name}
+                <p className={`font-terminal ${p.username === playerName ? 'crt-glow-accent' : 'crt-glow'}`}>
+                  {p.username}
                 </p>
-                <p className="text-xs" style={{ color: p.status === 'ALIVE' ? 'var(--crt-dim)' : 'var(--crt-red)' }}>
-                  [{p.status}]
+                <p className="text-xs" style={{ color: p.alive ? 'var(--crt-dim)' : 'var(--crt-red)' }}>
+                  [{p.alive ? 'ALIVE' : 'EJECTED'}]
                 </p>
+                {taskProgress[p.username] !== undefined && (
+                  <p className="text-xs" style={{ color: 'var(--crt-dim)' }}>
+                    TASKS: {taskProgress[p.username]}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -270,7 +250,7 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
               );
             })}
             <p className="mt-1" style={{ color: isIntern ? 'var(--crt-red)' : 'var(--crt-green)', textShadow: isIntern ? 'var(--crt-glow-red)' : 'var(--crt-glow)' }}>
-              DONE: {taskProgress}
+              DONE: {completedTaskIds.length}/{tasks.length}
             </p>
           </div>
         </div>
@@ -304,7 +284,7 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
                   <p className={`font-terminal text-base ${isIntern ? 'crt-glow-red' : 'crt-glow-accent'}`}>
                     {currentTask?.title}
                   </p>
-                  <span className="text-xs" style={{ color: 'var(--crt-dim)' }}>{taskProgress} COMPLETE</span>
+                  <span className="text-xs" style={{ color: 'var(--crt-dim)' }}>{completedTaskIds.length}/{tasks.length} COMPLETE</span>
                 </div>
                 <pre className="text-xs whitespace-pre-wrap" style={{ color: isIntern ? '#ff555588' : 'var(--crt-dim)', lineHeight: 1.6 }}>
                   {currentTask?.description}

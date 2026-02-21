@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import CRTFrame from '@/components/CRTFrame';
 import CRTIntro from '@/components/CRTIntro';
 import BootScreen from '@/components/BootScreen';
@@ -16,45 +16,62 @@ import { useRoom } from '@/hooks/useRoom';
 import type { Task } from '@/types/task';
 
 type Screen =
-  | 'boot'
-  | 'create'
-  | 'join'
-  | 'lobby'
-  | 'category'
-  | 'role'
-  | 'game'
-  | 'emergency'
-  | 'meeting'
-  | 'summary'
-  | 'final';
-
-// The AI players excluding the local player slot (filled in at game-start)
-const BOT_NAMES = ['CIPHER', 'NULLPTR', 'STACK0F'];
+  | 'boot' | 'create' | 'join' | 'lobby'
+  | 'category' | 'role' | 'game'
+  | 'emergency' | 'meeting' | 'summary' | 'final';
 
 const Index = () => {
-  const [introComplete, setIntroComplete] = useState(false);
-  const [screen, setScreen] = useState<Screen>('boot');
-  const [playerName, setPlayerName] = useState('');
-  const [roomCode, setRoomCode] = useState('');
-  const [category, setCategory] = useState('FRONTEND');
-  const [role, setRole] = useState<'engineer' | 'intern'>('engineer');
-  const [round, setRound] = useState(1);
-  const [winner, setWinner] = useState<'engineers' | 'intern'>('engineers');
-  const [alivePlayers, setAlivePlayers] = useState<string[]>([]);
+  const [introComplete, setIntroComplete]       = useState(false);
+  const [screen, setScreen]                     = useState<Screen>('boot');
+  const [playerName, setPlayerName]             = useState('');
+  const [roomCode, setRoomCode]                 = useState('');
   const [emergencyTrigger, setEmergencyTrigger] = useState<'button' | 'timer'>('button');
-  const [roundTasks, setRoundTasks] = useState<Task[]>([]);
-  const [tasksCompleted, setTasksCompleted] = useState(0);
+  const [roundTasks, setRoundTasks]             = useState<Task[]>([]);
+  const [tasksCompleted, setTasksCompleted]     = useState(0);
 
-  // Real-time room state from socket
   const room = useRoom();
 
-  // The intern's identity — set once per game, never changes between rounds
-  const internNameRef = useRef<string>('');
-  // Track the last ejected player and whether they were actually the intern
-  const [lastEjected, setLastEjected] = useState<string | null>(null);
-  const [lastEjectedWasIntern, setLastEjectedWasIntern] = useState(false);
+  // ── React to server-driven phase changes ──────────────────────────────────
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  // category_selected → compute local tasks then go to role_reveal
+  useEffect(() => {
+    if (room.gamePhase === 'role_reveal' && room.selectedCategory && room.myRole) {
+      setRoundTasks(getTasksForCategory(room.selectedCategory, room.myRole));
+      setScreen('role');
+    }
+  }, [room.gamePhase, room.selectedCategory, room.myRole]);
+
+  // meeting_started → emergency interstitial first
+  useEffect(() => {
+    if (room.gamePhase === 'meeting') {
+      setScreen('emergency');
+    }
+  }, [room.gamePhase]);
+
+  // vote_result received → summary screen (server already set phase = 'summary')
+  useEffect(() => {
+    if (room.voteResult) {
+      // emergency → meeting reveal handled by EmergencyScreen completing
+      // but we need to be ON the meeting screen first
+    }
+  }, [room.voteResult]);
+
+  // next_round_started → go back to category vote
+  useEffect(() => {
+    if (room.gamePhase === 'category_vote' && screen !== 'lobby' && screen !== 'boot'
+        && screen !== 'create' && screen !== 'join') {
+      setScreen('category');
+    }
+  }, [room.gamePhase]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // game_over → final screen
+  useEffect(() => {
+    if (room.gameOver) {
+      setScreen('final');
+    }
+  }, [room.gameOver]);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleBootSelect = useCallback((mode: 'create' | 'join') => {
     setScreen(mode === 'create' ? 'create' : 'join');
@@ -62,60 +79,35 @@ const Index = () => {
 
   const handleCreateJoinSubmit = useCallback((name: string, code: string) => {
     setPlayerName(name);
-    // For create-mode the server assigns the room ID (arrives via room.roomId);
-    // for join-mode the player typed it themselves.  Fall back to whichever is set.
     setRoomCode(code || room.roomId);
     setScreen('lobby');
   }, [room.roomId]);
 
+  // Host clicks START — emits start_game to server
   const handleGameStart = useCallback(() => {
+    room.startGame();
+    // server will fire game_started → category_vote_update will arrive
+    // and we move to category screen
     setScreen('category');
+  }, [room]);
+
+  // Role reveal finished → go to game screen
+  const handleRoleComplete = useCallback(() => {
+    setScreen('game');
   }, []);
 
-  const handleCategoryComplete = useCallback((cat: string, currentPlayerName: string, currentRole: string) => {
-    setCategory(cat);
-
-    // On round 1: assign role + pick intern identity
-    // On subsequent rounds: keep same role, just get new tasks
-    if (round === 1 || currentRole === '') {
-      const assignedRole: 'engineer' | 'intern' = Math.random() < 0.75 ? 'engineer' : 'intern';
-      setRole(assignedRole);
-
-      // Pick who the intern is — if player is intern it's them, else pick a random bot
-      if (assignedRole === 'intern') {
-        internNameRef.current = currentPlayerName;
-      } else {
-        internNameRef.current = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
-      }
-
-      setRoundTasks(getTasksForCategory(cat, assignedRole));
-      setScreen('role');
-    } else {
-      // Subsequent rounds: same role, fresh tasks for the new category
-      setRoundTasks(getTasksForCategory(cat, currentRole as 'engineer' | 'intern'));
-      setScreen('role');
-    }
-  }, [round]);
-
-  const handleRoleComplete = useCallback((currentPlayerName: string) => {
-    // Prefer real socket players; fall back to local player + bots for solo/offline play
-    const players =
-      room.players.length >= 2
-        ? room.players.map((p) => p.username)
-        : [currentPlayerName, ...BOT_NAMES];
-    setAlivePlayers(players);
-    setScreen('game');
-  }, [room.players]);
-
+  // Player clicks Emergency Meeting button in game
   const handleEmergency = useCallback(() => {
     setEmergencyTrigger('button');
-    setScreen('emergency');
-  }, []);
+    room.triggerMeeting();
+    // server fires meeting_started → useEffect above sets screen='emergency'
+  }, [room]);
 
+  // Round timer expired
   const handleTimerEnd = useCallback(() => {
     setEmergencyTrigger('timer');
-    setScreen('emergency');
-  }, []);
+    room.triggerMeeting();
+  }, [room]);
 
   const handleEmergencyComplete = useCallback(() => {
     setScreen('meeting');
@@ -123,77 +115,55 @@ const Index = () => {
 
   const handleTasksCompleted = useCallback((count: number) => {
     setTasksCompleted(count);
-  }, []);
+    room.reportTaskProgress(count);
+  }, [room]);
 
-  const handleMeetingComplete = useCallback((ejected: string | null, currentRole: string, currentRound: number, currentAlivePlayers: string[]) => {
-    const internName = internNameRef.current;
-    const ejectedIsIntern = ejected === internName;
-
-    setLastEjected(ejected);
-    setLastEjectedWasIntern(ejectedIsIntern);
-
-    const nextAlive = ejected
-      ? currentAlivePlayers.filter((p) => p !== ejected)
-      : currentAlivePlayers;
-    setAlivePlayers(nextAlive);
-
-    // Win conditions:
-    // 1. Intern ejected → Engineers win immediately
-    if (ejectedIsIntern) {
-      setWinner('engineers');
+  // Meeting screen done (after vote_result reveal delay)
+  const handleMeetingComplete = useCallback(() => {
+    if (room.gameOver) {
       setScreen('final');
-      return;
+    } else {
+      setScreen('summary');
     }
+  }, [room.gameOver]);
 
-    // 2. Only intern + ≤1 engineer left → Intern wins
-    const engineersLeft = nextAlive.filter((p) => p !== internName).length;
-    if (engineersLeft <= 1) {
-      setWinner('intern');
-      setScreen('final');
-      return;
-    }
-
-    // 3. Final round elapsed → Intern wins (survived 3 rounds)
-    if (currentRound >= 3) {
-      setWinner('intern');
-      setScreen('final');
-      return;
-    }
-
-    // Otherwise: show round summary, then next round category vote
-    setScreen('summary');
-  }, []);
-
+  // Summary screen 5s countdown done → server already fired next_round_started
+  // but give a manual path too
   const handleSummaryComplete = useCallback(() => {
-    setRound((r) => r + 1);
     setScreen('category');
   }, []);
 
   const handlePlayAgain = useCallback(() => {
-    setRound(1);
-    setRole('engineer');
-    internNameRef.current = '';
-    setLastEjected(null);
-    setTasksCompleted(0);
-    setScreen('category');
-  }, []);
-
-  const handleExit = useCallback(() => {
+    room.disconnect();
     setScreen('boot');
-    setRound(1);
-    setRole('engineer');
-    internNameRef.current = '';
-    setLastEjected(null);
-    setTasksCompleted(0);
     setPlayerName('');
     setRoomCode('');
-  }, []);
+    setRoundTasks([]);
+    setTasksCompleted(0);
+  }, [room]);
+
+  const handleExit = useCallback(() => {
+    room.disconnect();
+    setScreen('boot');
+    setPlayerName('');
+    setRoomCode('');
+    setRoundTasks([]);
+    setTasksCompleted(0);
+  }, [room]);
+
+  // ── Derived values ────────────────────────────────────────────────────────
+
+  const alivePlayers = room.players.filter((p) => p.alive);
 
   return (
     <>
       {!introComplete && <CRTIntro onComplete={() => setIntroComplete(true)} />}
       <CRTFrame>
-        {screen === 'boot' && <BootScreen onSelect={handleBootSelect} />}
+
+        {screen === 'boot' && (
+          <BootScreen onSelect={handleBootSelect} />
+        )}
+
         {(screen === 'create' || screen === 'join') && (
           <CreateJoinScreen
             mode={screen}
@@ -206,6 +176,7 @@ const Index = () => {
             socketError={room.error}
           />
         )}
+
         {screen === 'lobby' && (
           <LobbyScreen
             playerName={playerName}
@@ -214,66 +185,83 @@ const Index = () => {
             onStart={handleGameStart}
           />
         )}
+
         {screen === 'category' && (
           <CategoryVoteScreen
-            round={round}
-            onComplete={(cat) => handleCategoryComplete(cat, playerName, role)}
+            round={room.round}
+            totalPlayers={alivePlayers.length}
+            votes={room.categoryVotes}
+            selectedCategory={room.selectedCategory}
+            onVote={room.castCategoryVote}
+            onComplete={() => {/* transition driven by useEffect on role_reveal phase */}}
           />
         )}
+
         {screen === 'role' && (
           <RoleRevealScreen
-            role={role}
-            round={round}
-            onComplete={() => handleRoleComplete(playerName)}
+            role={room.myRole ?? 'engineer'}
+            round={room.round}
+            onComplete={handleRoleComplete}
           />
         )}
+
         {screen === 'game' && (
           <MainGameScreen
             playerName={playerName}
-            round={round}
-            category={category}
-            role={role}
+            round={room.round}
+            category={room.selectedCategory}
+            role={room.myRole ?? 'engineer'}
             tasks={roundTasks}
+            players={room.players}
+            taskProgress={room.taskProgress}
             onEmergency={handleEmergency}
             onTimerEnd={handleTimerEnd}
             onTasksCompleted={handleTasksCompleted}
           />
         )}
+
         {screen === 'emergency' && (
           <EmergencyScreen
             trigger={emergencyTrigger}
             onComplete={handleEmergencyComplete}
           />
         )}
+
         {screen === 'meeting' && (
           <MeetingScreen
             playerName={playerName}
             players={alivePlayers}
-            internName={internNameRef.current}
-            onComplete={(ejected) => handleMeetingComplete(ejected, role, round, alivePlayers)}
+            triggeredBy={room.meetingTriggeredBy}
+            ejectionVotes={room.ejectionVotes}
+            voteResult={room.voteResult}
+            onCastVote={room.castEjectionVote}
+            onComplete={handleMeetingComplete}
           />
         )}
-        {screen === 'summary' && (
+
+        {screen === 'summary' && room.voteResult && (
           <RoundSummaryScreen
-            round={round}
-            ejected={lastEjected}
-            ejectedWasIntern={lastEjectedWasIntern}
-            internName={internNameRef.current}
-            alivePlayers={alivePlayers}
+            round={room.round}
+            ejected={room.voteResult.ejectedUsername}
+            ejectedWasIntern={room.voteResult.ejectedWasIntern}
+            internName={room.voteResult.internUsername}
+            alivePlayers={alivePlayers.map((p) => p.username)}
             tasksCompleted={tasksCompleted}
             totalTasks={roundTasks.length}
             onComplete={handleSummaryComplete}
           />
         )}
-        {screen === 'final' && (
+
+        {screen === 'final' && room.gameOver && (
           <FinalScreen
-            winner={winner}
-            internName={internNameRef.current}
-            playerRole={role}
+            winner={room.gameOver.winner}
+            internName={room.gameOver.internUsername}
+            playerRole={room.myRole ?? 'engineer'}
             onPlayAgain={handlePlayAgain}
             onExit={handleExit}
           />
         )}
+
       </CRTFrame>
     </>
   );

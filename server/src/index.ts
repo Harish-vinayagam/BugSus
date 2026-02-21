@@ -5,7 +5,10 @@ import type { ClientToServerEvents, ServerToClientEvents } from '../../shared/ty
 import { registerSocketHandlers } from './socketHandlers';
 
 const PORT = process.env.PORT ?? 3001;
-const CLIENT_URL = process.env.CLIENT_URL ?? 'http://localhost:5173';
+
+// Allow any origin in dev so LAN devices can connect without needing an exact URL.
+// In production set CLIENT_URL to your deployed frontend URL.
+const CLIENT_URL = process.env.CLIENT_URL ?? '*';
 
 // ── Express + HTTP server ────────────────────────────────────────────────────
 const app = express();
