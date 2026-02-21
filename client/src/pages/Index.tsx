@@ -12,6 +12,7 @@ import MeetingScreen from '@/components/MeetingScreen';
 import RoundSummaryScreen from '@/components/RoundSummaryScreen';
 import FinalScreen from '@/components/FinalScreen';
 import { getTasksForCategory } from '@/data/tasks';
+import { useRoom } from '@/hooks/useRoom';
 import type { Task } from '@/types/task';
 
 type Screen =
@@ -44,6 +45,9 @@ const Index = () => {
   const [roundTasks, setRoundTasks] = useState<Task[]>([]);
   const [tasksCompleted, setTasksCompleted] = useState(0);
 
+  // Real-time room state from socket
+  const room = useRoom();
+
   // The intern's identity — set once per game, never changes between rounds
   const internNameRef = useRef<string>('');
   // Track the last ejected player and whether they were actually the intern
@@ -58,9 +62,11 @@ const Index = () => {
 
   const handleCreateJoinSubmit = useCallback((name: string, code: string) => {
     setPlayerName(name);
-    setRoomCode(code);
+    // For create-mode the server assigns the room ID (arrives via room.roomId);
+    // for join-mode the player typed it themselves.  Fall back to whichever is set.
+    setRoomCode(code || room.roomId);
     setScreen('lobby');
-  }, []);
+  }, [room.roomId]);
 
   const handleGameStart = useCallback(() => {
     setScreen('category');
@@ -92,10 +98,14 @@ const Index = () => {
   }, [round]);
 
   const handleRoleComplete = useCallback((currentPlayerName: string) => {
-    const players = [currentPlayerName, ...BOT_NAMES];
+    // Prefer real socket players; fall back to local player + bots for solo/offline play
+    const players =
+      room.players.length >= 2
+        ? room.players.map((p) => p.username)
+        : [currentPlayerName, ...BOT_NAMES];
     setAlivePlayers(players);
     setScreen('game');
-  }, []);
+  }, [room.players]);
 
   const handleEmergency = useCallback(() => {
     setEmergencyTrigger('button');
@@ -189,12 +199,18 @@ const Index = () => {
             mode={screen}
             onSubmit={handleCreateJoinSubmit}
             onBack={() => setScreen('boot')}
+            onCreateRoom={room.createRoom}
+            onJoinRoom={room.joinRoom}
+            socketStatus={room.status}
+            socketRoomId={room.roomId}
+            socketError={room.error}
           />
         )}
         {screen === 'lobby' && (
           <LobbyScreen
             playerName={playerName}
-            roomCode={roomCode}
+            roomCode={roomCode || room.roomId}
+            players={room.players}
             onStart={handleGameStart}
           />
         )}
