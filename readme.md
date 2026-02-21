@@ -162,26 +162,26 @@ npm run lint        # ESLint
 
 ## ▲ Deploying to Vercel
 
-The app lives in the `client/` subdirectory. A `vercel.json` at the repo root handles this automatically.
+The app lives in the `client/` subdirectory. A `vercel.json` inside `client/` configures the build automatically.
 
 **Steps:**
 
 1. Push the repo to GitHub.
 2. Go to [vercel.com/new](https://vercel.com/new) → import your repo.
 3. In **Configure Project**, set **Root Directory** to `client`.
-4. Leave Framework as **Vite** (auto-detected). Vercel will use the settings in `vercel.json`.
-5. Click **Deploy**.
+4. Click **Deploy** — everything else is handled by `client/vercel.json`.
 
-The `vercel.json` at the repo root sets:
+`client/vercel.json`:
 ```json
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite",
+  "installCommand": "npm install",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
 ```
-The `rewrites` rule ensures React Router routes don't 404 on hard refresh.
+
+> ⚠️ Do **not** set `"framework": "vite"` in `vercel.json` — it causes Vercel to generate its own `vite build` command which bypasses `node_modules/.bin` and results in `vite: command not found` (exit 127). Using `npm run build` instead resolves the binary correctly.
 
 ---
 
