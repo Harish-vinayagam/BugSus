@@ -19,8 +19,11 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 // ── Socket.IO ────────────────────────────────────────────────────────────────
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
   cors: {
-    origin: CLIENT_URL,
+    origin: process.env.CLIENT_URL
+      ? process.env.CLIENT_URL.split(',')
+      : '*',
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 });
 
