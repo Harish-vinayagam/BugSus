@@ -1,7 +1,7 @@
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import type { ClientToServerEvents, ServerToClientEvents } from '../../shared/types';
+import type { ClientToServerEvents, ServerToClientEvents } from './types';
 import { registerSocketHandlers } from './socketHandlers';
 
 const PORT = process.env.PORT ?? 3001;
