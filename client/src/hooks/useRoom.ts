@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { socket } from '@/lib/socket';
 import type {
   Player,
@@ -69,8 +69,8 @@ export const useRoom = (): UseRoomReturn => {
   const [taskProgress, setTaskProgress]         = useState<Record<string, number>>({});
   const [gameOver, setGameOver]                 = useState<GameOverPayload | null>(null);
 
-  // store roomId in a ref so callbacks don't go stale
-  const [roomIdRef, setRoomIdRef] = useState('');
+  // store roomId in a ref so socket callbacks always have the latest value
+  const roomIdRef = useRef('');
 
   useEffect(() => {
     const onConnect = () => {
@@ -81,11 +81,11 @@ export const useRoom = (): UseRoomReturn => {
       setError('Could not reach server. Is it running?');
     };
     const onRoomCreated = (p: { roomId: string; players: Player[] }) => {
-      setRoomId(p.roomId); setRoomIdRef(p.roomId);
+      setRoomId(p.roomId); roomIdRef.current = p.roomId;
       setPlayers(p.players); setStatus('in_room');
     };
     const onRoomJoined = (p: { roomId: string; players: Player[] }) => {
-      setRoomId(p.roomId); setRoomIdRef(p.roomId);
+      setRoomId(p.roomId); roomIdRef.current = p.roomId;
       setPlayers(p.players); setStatus('in_room');
     };
     const onPlayerListUpdate = (p: { roomId: string; players: Player[] }) => {
@@ -207,24 +207,24 @@ export const useRoom = (): UseRoomReturn => {
   }, []);
 
   const startGame = useCallback(() => {
-    socket.emit('start_game', { roomId: roomIdRef });
-  }, [roomIdRef]);
+    socket.emit('start_game', { roomId: roomIdRef.current });
+  }, []);
 
   const castCategoryVote = useCallback((category: string) => {
-    socket.emit('category_vote', { roomId: roomIdRef, category });
-  }, [roomIdRef]);
+    socket.emit('category_vote', { roomId: roomIdRef.current, category });
+  }, []);
 
   const triggerMeeting = useCallback(() => {
-    socket.emit('start_meeting', { roomId: roomIdRef });
-  }, [roomIdRef]);
+    socket.emit('start_meeting', { roomId: roomIdRef.current });
+  }, []);
 
   const castEjectionVote = useCallback((targetId: string | 'SKIP') => {
-    socket.emit('cast_vote', { roomId: roomIdRef, targetId });
-  }, [roomIdRef]);
+    socket.emit('cast_vote', { roomId: roomIdRef.current, targetId });
+  }, []);
 
   const reportTaskProgress = useCallback((count: number) => {
-    socket.emit('task_progress', { roomId: roomIdRef, count });
-  }, [roomIdRef]);
+    socket.emit('task_progress', { roomId: roomIdRef.current, count });
+  }, []);
 
   return {
     status, roomId, players, error,

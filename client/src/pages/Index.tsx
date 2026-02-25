@@ -33,6 +33,13 @@ const Index = () => {
 
   // ── React to server-driven phase changes ──────────────────────────────────
 
+  // game_started → ALL players (host + non-host) move to category vote screen
+  useEffect(() => {
+    if (room.gamePhase === 'category_vote') {
+      setScreen('category');
+    }
+  }, [room.gamePhase]);
+
   // category_selected → compute local tasks then go to role_reveal
   useEffect(() => {
     if (room.gamePhase === 'role_reveal' && room.selectedCategory && room.myRole) {
@@ -47,22 +54,6 @@ const Index = () => {
       setScreen('emergency');
     }
   }, [room.gamePhase]);
-
-  // vote_result received → summary screen (server already set phase = 'summary')
-  useEffect(() => {
-    if (room.voteResult) {
-      // emergency → meeting reveal handled by EmergencyScreen completing
-      // but we need to be ON the meeting screen first
-    }
-  }, [room.voteResult]);
-
-  // next_round_started → go back to category vote
-  useEffect(() => {
-    if (room.gamePhase === 'category_vote' && screen !== 'lobby' && screen !== 'boot'
-        && screen !== 'create' && screen !== 'join') {
-      setScreen('category');
-    }
-  }, [room.gamePhase]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // game_over → final screen
   useEffect(() => {
@@ -84,11 +75,10 @@ const Index = () => {
   }, [room.roomId]);
 
   // Host clicks START — emits start_game to server
+  // Screen transition is handled by the useEffect above (gamePhase → 'category_vote')
+  // so ALL players (not just the host) get moved to the category screen
   const handleGameStart = useCallback(() => {
     room.startGame();
-    // server will fire game_started → category_vote_update will arrive
-    // and we move to category screen
-    setScreen('category');
   }, [room]);
 
   // Role reveal finished → go to game screen
