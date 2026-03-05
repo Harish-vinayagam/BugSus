@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import type { Player } from '../../../shared/types';
 
 interface LobbyScreenProps {
@@ -13,6 +13,14 @@ const MAX_PLAYERS = 4;
 const LobbyScreen: React.FC<LobbyScreenProps> = ({ playerName, roomCode, players, onStart }) => {
   const logRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(roomCode).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [roomCode]);
 
   // Build a running log from player list changes
   const logs = players.map((p, i) =>
@@ -32,7 +40,20 @@ const LobbyScreen: React.FC<LobbyScreenProps> = ({ playerName, roomCode, players
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="crt-glow font-terminal text-xl">ROOM: <span className="crt-glow-accent tracking-widest">{roomCode}</span></p>
+          <div className="flex items-center gap-3">
+            <p className="crt-glow font-terminal text-xl">ROOM: <span className="crt-glow-accent tracking-widest">{roomCode}</span></p>
+            <button
+              onClick={handleCopy}
+              className="crt-button text-xs px-3 py-1 font-terminal"
+              style={{
+                color: copied ? 'var(--crt-accent)' : 'var(--crt-green)',
+                borderColor: copied ? 'var(--crt-accent)' : 'var(--crt-green)',
+                minWidth: '120px',
+              }}
+            >
+              {copied ? '✓ COPIED!' : '⎘ COPY CODE'}
+            </button>
+          </div>
           <p className="text-xs mt-1" style={{ color: 'var(--crt-dim)' }}>SHARE THIS CODE WITH YOUR TEAM</p>
         </div>
         <p className="crt-glow font-terminal text-lg" style={{ color: players.length >= MAX_PLAYERS ? 'var(--crt-accent)' : 'var(--crt-dim)' }}>
