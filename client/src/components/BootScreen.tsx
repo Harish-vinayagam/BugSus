@@ -5,9 +5,30 @@ interface BootScreenProps {
   onSelect: (mode: 'create' | 'join') => void;
 }
 
+const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? 'http://localhost:3001';
+
 const BootScreen: React.FC<BootScreenProps> = ({ onSelect }) => {
   const [phase, setPhase] = useState(0);
   const [inputValue, setInputValue] = useState('');
+  const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+
+  // Ping server as soon as boot screen mounts — gives ~5–8s of warm-up time
+  // during the typing animation before the user can even click anything
+  useEffect(() => {
+    let cancelled = false;
+    let attempts = 0;
+    const ping = () => {
+      fetch(`${SERVER_URL}/health`)
+        .then(() => { if (!cancelled) setServerStatus('online'); })
+        .catch(() => {
+          if (cancelled) return;
+          if (++attempts < 10) setTimeout(ping, 3000);
+          else setServerStatus('offline');
+        });
+    };
+    ping();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleCommand = useCallback((cmd: string) => {
     const c = cmd.trim().toUpperCase();
@@ -66,6 +87,16 @@ const BootScreen: React.FC<BootScreenProps> = ({ onSelect }) => {
             </pre>
             <p className="crt-glow text-sm" style={{ color: 'var(--crt-dim)' }}>
               {'> '}A SOCIAL DEDUCTION GAME FOR PROGRAMMERS
+            </p>
+            {/* Server status indicator */}
+            <p className="text-xs font-mono mt-1" style={{
+              color: serverStatus === 'online' ? 'var(--crt-green)'
+                   : serverStatus === 'offline' ? 'var(--crt-red)'
+                   : 'var(--crt-dim)'
+            }}>
+              {serverStatus === 'checking' && '● CONNECTING TO SERVER...'}
+              {serverStatus === 'online'   && '● SERVER ONLINE'}
+              {serverStatus === 'offline'  && '● SERVER UNREACHABLE — CHECK CONNECTION'}
             </p>
             <div className="mt-6">
               <p className="crt-glow mb-4">ENTER COMMAND:</p>
