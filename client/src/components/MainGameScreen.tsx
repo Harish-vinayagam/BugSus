@@ -12,8 +12,12 @@ interface MainGameScreenProps {
   category: string;
   role: 'engineer' | 'intern';
   tasks: Task[];
-  players: Player[];                       // live from socket
-  taskProgress: Record<string, number>;    // username → completed count
+  players: Player[];
+  taskProgress: Record<string, number>;
+  sharedCode: string;
+  sharedCodeTaskId: string;
+  sharedCodeSender: string;
+  onCodeChange: (code: string, taskId: string) => void;
   onEmergency: () => void;
   onTimerEnd: () => void;
   onTasksCompleted: (count: number) => void;
@@ -31,6 +35,10 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   tasks,
   players,
   taskProgress,
+  sharedCode,
+  sharedCodeTaskId,
+  sharedCodeSender,
+  onCodeChange,
   onEmergency,
   onTimerEnd,
   onTasksCompleted,
@@ -51,6 +59,16 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   const [chatMessages, setChatMessages] = useState<{ user: string; text: string }[]>([]);
   const [chatInput, setChatInput] = useState('');
   const chatRef = useRef<HTMLDivElement>(null);
+  const broadcastDebounce = useRef<ReturnType<typeof setTimeout>>();
+
+  // ── Apply remote code changes from other players ────────────────────────────
+  useEffect(() => {
+    if (!sharedCode || !currentTask) return;
+    // Only apply if the incoming change is for the task we're currently on
+    if (sharedCodeTaskId === currentTask.id) {
+      setEditorCode(sharedCode);
+    }
+  }, [sharedCode, sharedCodeTaskId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset task state when tasks list changes (new round / category)
   useEffect(() => {
@@ -100,7 +118,14 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
     setEditorCode(value);
     setSubmitStatus('idle');
     setTestResults([]);
-  }, []);
+    // Debounce broadcast — send after 200ms of no typing to avoid spamming
+    if (currentTask) {
+      clearTimeout(broadcastDebounce.current);
+      broadcastDebounce.current = setTimeout(() => {
+        onCodeChange(value, currentTask.id);
+      }, 200);
+    }
+  }, [currentTask, onCodeChange]);
 
   const handleSubmit = useCallback(() => {
     if (!currentTask) return;
@@ -296,8 +321,13 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
                 className="flex-1 ascii-box overflow-hidden"
                 style={{ background: '#1e1e1e', minHeight: 0 }}
               >
-                <p className="font-terminal text-xs px-2 py-1" style={{ color: 'var(--crt-dim)', borderBottom: '1px solid #333' }}>
-                  ┌─ EDITOR ─┐
+                <p className="font-terminal text-xs px-2 py-1 flex items-center justify-between" style={{ color: 'var(--crt-dim)', borderBottom: '1px solid #333' }}>
+                  <span>┌─ EDITOR ─┐</span>
+                  {sharedCodeSender && sharedCodeTaskId === currentTask?.id && (
+                    <span style={{ color: 'var(--crt-accent)', fontSize: '0.65rem' }}>
+                      ⟳ SYNCED FROM {sharedCodeSender}
+                    </span>
+                  )}
                 </p>
                 <div style={{ height: 'calc(100% - 28px)' }}>
                   <CodeEditor

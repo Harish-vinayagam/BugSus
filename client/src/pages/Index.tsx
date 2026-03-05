@@ -204,6 +204,10 @@ const Index = () => {
             tasks={roundTasks}
             players={room.players}
             taskProgress={room.taskProgress}
+            sharedCode={room.sharedCode}
+            sharedCodeTaskId={room.sharedCodeTaskId}
+            sharedCodeSender={room.sharedCodeSender}
+            onCodeChange={room.broadcastCode}
             onEmergency={handleEmergency}
             onTimerEnd={handleTimerEnd}
             onTasksCompleted={handleTasksCompleted}

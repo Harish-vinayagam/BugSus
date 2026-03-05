@@ -10,7 +10,7 @@ interface CategoryVoteScreenProps {
 }
 
 const CATEGORIES = ['FRONTEND', 'BACKEND', 'OOPS', 'DSA'];
-const VOTE_TIMEOUT = 20;
+const VOTE_TIMEOUT = 30;
 
 const CategoryVoteScreen: React.FC<CategoryVoteScreenProps> = ({
   round, totalPlayers, votes, onVote, onComplete, selectedCategory,

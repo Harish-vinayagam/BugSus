@@ -255,6 +255,20 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
     }
   });
 
+  // ── code_change ────────────────────────────────────────────────────────────
+  socket.on('code_change', ({ roomId, code, taskId }) => {
+    const room = getRoom(roomId);
+    if (!room) return;
+    const player = room.players.find((p) => p.id === socket.id);
+    if (!player) return;
+    // Broadcast to everyone EXCEPT the sender
+    socket.to(roomId).emit('code_synced', {
+      code,
+      taskId,
+      senderName: player.username,
+    });
+  });
+
   // ── disconnect ─────────────────────────────────────────────────────────────
   socket.on('disconnect', () => {
     const room = removePlayer(socket.id);

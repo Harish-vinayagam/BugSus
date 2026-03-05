@@ -11,6 +11,7 @@ import type {
   GameOverPayload,
   NextRoundStartedPayload,
   TaskProgressUpdatePayload,
+  CodeSyncedPayload,
 } from '../../../shared/types';
 
 export type RoomStatus =
@@ -36,6 +37,7 @@ export interface UseRoomReturn {
   triggerMeeting: () => void;
   castEjectionVote: (targetId: string | 'SKIP') => void;
   reportTaskProgress: (count: number) => void;
+  broadcastCode: (code: string, taskId: string) => void;
   // game state
   gamePhase: string;
   round: number;
@@ -46,8 +48,12 @@ export interface UseRoomReturn {
   meetingTriggeredBy: string;
   ejectionVotes: Record<string, number>;
   voteResult: VoteResultPayload | null;
-  taskProgress: Record<string, number>; // username → count
+  taskProgress: Record<string, number>;
   gameOver: GameOverPayload | null;
+  // multiplayer code sync
+  sharedCode: string;
+  sharedCodeTaskId: string;
+  sharedCodeSender: string;
 }
 
 export const useRoom = (): UseRoomReturn => {
@@ -68,6 +74,9 @@ export const useRoom = (): UseRoomReturn => {
   const [voteResult, setVoteResult]             = useState<VoteResultPayload | null>(null);
   const [taskProgress, setTaskProgress]         = useState<Record<string, number>>({});
   const [gameOver, setGameOver]                 = useState<GameOverPayload | null>(null);
+  const [sharedCode, setSharedCode]             = useState<string>('');
+  const [sharedCodeTaskId, setSharedCodeTaskId] = useState('');
+  const [sharedCodeSender, setSharedCodeSender] = useState('');
 
   // store roomId in a ref so socket callbacks always have the latest value
   const roomIdRef = useRef('');
@@ -141,7 +150,13 @@ export const useRoom = (): UseRoomReturn => {
       setRound(p.round); setPlayers(p.players);
       setCategoryVotes({}); setSelectedCategory('');
       setVoteResult(null); setEjectionVotes({});
+      setSharedCode(''); setSharedCodeTaskId(''); setSharedCodeSender('');
       setGamePhase('category_vote');
+    };
+    const onCodeSynced = (p: CodeSyncedPayload) => {
+      setSharedCode(p.code);
+      setSharedCodeTaskId(p.taskId);
+      setSharedCodeSender(p.senderName);
     };
 
     socket.on('connect',               onConnect);
@@ -160,6 +175,7 @@ export const useRoom = (): UseRoomReturn => {
     socket.on('task_progress_update',  onTaskProgressUpdate);
     socket.on('game_over',             onGameOver);
     socket.on('next_round_started',    onNextRoundStarted);
+    socket.on('code_synced',           onCodeSynced);
 
     return () => {
       socket.off('connect',               onConnect);
@@ -178,6 +194,7 @@ export const useRoom = (): UseRoomReturn => {
       socket.off('task_progress_update',  onTaskProgressUpdate);
       socket.off('game_over',             onGameOver);
       socket.off('next_round_started',    onNextRoundStarted);
+      socket.off('code_synced',           onCodeSynced);
     };
   }, []);
 
@@ -226,12 +243,19 @@ export const useRoom = (): UseRoomReturn => {
     socket.emit('task_progress', { roomId: roomIdRef.current, count });
   }, []);
 
+  const broadcastCode = useCallback((code: string, taskId: string) => {
+    if (!roomIdRef.current) return;
+    socket.emit('code_change', { roomId: roomIdRef.current, code, taskId });
+  }, []);
+
   return {
     status, roomId, players, error,
     createRoom, joinRoom, disconnect,
-    startGame, castCategoryVote, triggerMeeting, castEjectionVote, reportTaskProgress,
+    startGame, castCategoryVote, triggerMeeting, castEjectionVote,
+    reportTaskProgress, broadcastCode,
     gamePhase, round, myRole, categoryVotes, selectedCategory,
     meetingPlayers, meetingTriggeredBy, ejectionVotes, voteResult,
     taskProgress, gameOver,
+    sharedCode, sharedCodeTaskId, sharedCodeSender,
   };
 };
