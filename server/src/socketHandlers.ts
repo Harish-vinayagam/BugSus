@@ -15,6 +15,7 @@ import {
   recordTaskProgress,
   setPhase,
 } from './roomStore';
+import { pickTaskIds } from './taskPicker';
 
 type GameServer = Server<ClientToServerEvents, ServerToClientEvents>;
 type GameSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
@@ -55,14 +56,19 @@ const finaliseCategoryVote = (io: GameServer, roomId: string) => {
 
   io.to(roomId).emit('category_selected', { category: winner, votes: tally });
 
-  // Assign intern and send each player their private role
+  // Pick task IDs ONCE for this round — stored on room so they're identical for all players
+  room.engineerTaskIds = pickTaskIds(winner, 'engineer', 10);
+  room.internTaskIds   = pickTaskIds(winner, 'intern',   10);
+
+  // Assign intern and send each player their private role + task list
   const result = assignRoles(roomId);
   if (!result) return;
 
   const internId = result.internId;
   room.players.forEach((p) => {
     const role: 'engineer' | 'intern' = p.id === internId ? 'intern' : 'engineer';
-    io.to(p.id).emit('role_assigned', { role, round: room.round });
+    const taskIds = role === 'engineer' ? room.engineerTaskIds : room.internTaskIds;
+    io.to(p.id).emit('role_assigned', { role, round: room.round, taskIds });
   });
 };
 

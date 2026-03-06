@@ -27,6 +27,8 @@ const makeRoom = (hostPlayer: Player): Room => ({
   ejectionVotes: {},
   tasksCompleted: {},
   winner: null,
+  engineerTaskIds: [],
+  internTaskIds: [],
 });
 
 // ── CRUD ──────────────────────────────────────────────────────────────────────
@@ -210,6 +212,8 @@ export const advanceRound = (roomId: string): Room | null => {
   room.phase = 'category_vote';
   room.categoryVotes = {};
   room.ejectionVotes = {};
+  room.engineerTaskIds = [];
+  room.internTaskIds = [];
   return room;
 };
 

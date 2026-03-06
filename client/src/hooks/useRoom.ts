@@ -42,6 +42,7 @@ export interface UseRoomReturn {
   gamePhase: string;
   round: number;
   myRole: 'engineer' | 'intern' | null;
+  myTaskIds: string[];       // server-assigned task IDs — identical for all engineers
   categoryVotes: Record<string, number>;
   selectedCategory: string;
   meetingPlayers: Player[];
@@ -66,6 +67,7 @@ export const useRoom = (): UseRoomReturn => {
   const [gamePhase, setGamePhase]               = useState('lobby');
   const [round, setRound]                       = useState(1);
   const [myRole, setMyRole]                     = useState<'engineer' | 'intern' | null>(null);
+  const [myTaskIds, setMyTaskIds]               = useState<string[]>([]);
   const [categoryVotes, setCategoryVotes]       = useState<Record<string, number>>({});
   const [selectedCategory, setSelectedCategory] = useState('');
   const [meetingPlayers, setMeetingPlayers]     = useState<Player[]>([]);
@@ -108,7 +110,7 @@ export const useRoom = (): UseRoomReturn => {
       setGamePhase('category_vote');
       setCategoryVotes({}); setSelectedCategory('');
       setVoteResult(null); setGameOver(null);
-      setTaskProgress({});
+      setTaskProgress({}); setMyTaskIds([]);
     };
     const onCategoryVoteUpdate = (p: CategoryVoteUpdatePayload) => {
       setCategoryVotes(p.votes);
@@ -120,6 +122,7 @@ export const useRoom = (): UseRoomReturn => {
     };
     const onRoleAssigned = (p: RoleAssignedPayload) => {
       setMyRole(p.role); setRound(p.round);
+      setMyTaskIds(p.taskIds ?? []);
       setGamePhase('role_reveal');
     };
     const onMeetingStarted = (p: MeetingStartedPayload) => {
@@ -151,6 +154,7 @@ export const useRoom = (): UseRoomReturn => {
       setCategoryVotes({}); setSelectedCategory('');
       setVoteResult(null); setEjectionVotes({});
       setSharedCode(''); setSharedCodeTaskId(''); setSharedCodeSender('');
+      setMyTaskIds([]);
       setGamePhase('category_vote');
     };
     const onCodeSynced = (p: CodeSyncedPayload) => {
@@ -253,7 +257,7 @@ export const useRoom = (): UseRoomReturn => {
     createRoom, joinRoom, disconnect,
     startGame, castCategoryVote, triggerMeeting, castEjectionVote,
     reportTaskProgress, broadcastCode,
-    gamePhase, round, myRole, categoryVotes, selectedCategory,
+    gamePhase, round, myRole, myTaskIds, categoryVotes, selectedCategory,
     meetingPlayers, meetingTriggeredBy, ejectionVotes, voteResult,
     taskProgress, gameOver,
     sharedCode, sharedCodeTaskId, sharedCodeSender,

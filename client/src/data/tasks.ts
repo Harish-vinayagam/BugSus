@@ -881,8 +881,17 @@ export const shuffle = <T>(arr: T[]): T[] => {
 };
 
 /**
+ * Returns tasks in the exact order of the given ID list.
+ * Used when the server dictates which tasks players get (so all engineers match).
+ * Falls back to getTasksForCategory if no IDs provided.
+ */
+export const getTasksByIds = (ids: string[]): Task[] =>
+  ids.map((id) => TASKS.find((t) => t.id === id)).filter(Boolean) as Task[];
+
+/**
  * Returns 10–12 randomly selected & shuffled tasks for the given category and role.
  * Engineers get normal coding tasks; interns get sabotage tasks.
+ * NOTE: Use getTasksByIds when the server sends taskIds — this is for fallback only.
  */
 export const getTasksForCategory = (category: string, role: 'engineer' | 'intern' = 'engineer'): Task[] => {
   const pool = shuffle(TASKS.filter((t) => t.category === category && t.forRole === role));

@@ -25,10 +25,12 @@ export interface Room {
   round: number;
   category: string;
   internId: string;
-  categoryVotes: Record<string, string>;   // socketId → category
-  ejectionVotes: Record<string, string>;   // socketId → targetId | 'SKIP'
-  tasksCompleted: Record<string, number>;  // socketId → count
+  categoryVotes: Record<string, string>;
+  ejectionVotes: Record<string, string>;
+  tasksCompleted: Record<string, number>;
   winner: 'engineers' | 'intern' | null;
+  engineerTaskIds: string[];   // same for all engineers, picked by server
+  internTaskIds: string[];     // same for all interns, picked by server
 }
 
 // ── Payloads: Client → Server ─────────────────────────────────────────────────
@@ -68,6 +70,7 @@ export interface CategorySelectedPayload {
 export interface RoleAssignedPayload {
   role: 'engineer' | 'intern';
   round: number;
+  taskIds: string[];   // ordered list of task IDs — same for every player of this role
 }
 
 export interface MeetingStartedPayload {

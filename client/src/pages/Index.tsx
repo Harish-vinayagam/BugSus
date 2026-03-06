@@ -11,7 +11,7 @@ import EmergencyScreen from '@/components/EmergencyScreen';
 import MeetingScreen from '@/components/MeetingScreen';
 import RoundSummaryScreen from '@/components/RoundSummaryScreen';
 import FinalScreen from '@/components/FinalScreen';
-import { getTasksForCategory } from '@/data/tasks';
+import { getTasksByIds } from '@/data/tasks';
 import { useRoom } from '@/hooks/useRoom';
 import type { Task } from '@/types/task';
 
@@ -43,7 +43,10 @@ const Index = () => {
   // category_selected → compute local tasks then go to role_reveal
   useEffect(() => {
     if (room.gamePhase === 'role_reveal' && room.selectedCategory && room.myRole) {
-      setRoundTasks(getTasksForCategory(room.selectedCategory, room.myRole));
+      // Use server-assigned taskIds so all engineers get identical tasks
+      if (room.myTaskIds.length > 0) {
+        setRoundTasks(getTasksByIds(room.myTaskIds));
+      }
       setScreen('role');
     }
   }, [room.gamePhase, room.selectedCategory, room.myRole]);
