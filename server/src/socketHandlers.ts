@@ -71,6 +71,9 @@ const finaliseCategoryVote = (io: GameServer, roomId: string) => {
     // Everyone gets the same taskIds — intern just has a different role label
     io.to(p.id).emit('role_assigned', { role, round: room.round, taskIds: room.engineerTaskIds });
   });
+
+  // Advance phase to 'game' so the meeting guard doesn't block calls
+  room.phase = 'game';
 };
 
 /** Broadcast ejection result and check win condition */
@@ -202,7 +205,8 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
   // ── start_meeting ──────────────────────────────────────────────────────────
   socket.on('start_meeting', ({ roomId }) => {
     const room = getRoom(roomId);
-    if (!room || room.phase !== 'game') return;
+    // Allow meeting from 'game' OR 'role_reveal' (in case player calls it right after reveal)
+    if (!room || (room.phase !== 'game' && room.phase !== 'role_reveal')) return;
 
     room.phase = 'meeting';
     room.ejectionVotes = {};
