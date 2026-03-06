@@ -14,12 +14,14 @@ interface MainGameScreenProps {
   tasks: Task[];
   players: Player[];
   taskProgress: Record<string, number>;
+  completedTaskIds: string[];          // shared across all players via socket
   sharedCode: string;
   sharedCodeTaskId: string;
   sharedCodeSender: string;
   chatMessages: { username: string; text: string }[];
   onCodeChange: (code: string, taskId: string) => void;
   onChatSend: (text: string) => void;
+  onTaskCompleted: (taskId: string) => void; // fires once when THIS client completes a task
   onEmergency: () => void;
   onTimerEnd: () => void;
   onTasksCompleted: (count: number) => void;
@@ -37,18 +39,23 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   tasks,
   players,
   taskProgress,
+  completedTaskIds: remoteCompletedIds,
   sharedCode,
   sharedCodeTaskId,
   sharedCodeSender,
   chatMessages,
   onCodeChange,
   onChatSend,
+  onTaskCompleted,
   onEmergency,
   onTimerEnd,
   onTasksCompleted,
 }) => {
   // ── Task state ──────────────────────────────────────────────────────────────
-  const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([]);
+  // Local completed set merges with the server-broadcast set
+  const [localCompletedIds, setLocalCompletedIds] = useState<string[]>([]);
+  // Merge: a task is "done" if either this player or any other player completed it
+  const completedTaskIds = Array.from(new Set([...localCompletedIds, ...remoteCompletedIds]));
   const [currentTaskIdx, setCurrentTaskIdx] = useState(0);
   const currentTask: Task | null = tasks[currentTaskIdx] ?? null;
 
@@ -75,12 +82,33 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
 
   // Reset task state when tasks list changes (new round / category)
   useEffect(() => {
-    setCompletedTaskIds([]);
+    setLocalCompletedIds([]);
     setCurrentTaskIdx(0);
     setEditorCode(tasks[0]?.starterCode ?? '');
     setSubmitStatus('idle');
     setTestResults([]);
   }, [tasks]);
+
+  // Auto-advance when another player completes the task we're currently on
+  useEffect(() => {
+    if (!currentTask) return;
+    if (remoteCompletedIds.includes(currentTask.id) && !localCompletedIds.includes(currentTask.id)) {
+      // Mark locally so the done count stays consistent, then move on
+      setLocalCompletedIds((prev) => prev.includes(currentTask.id) ? prev : [...prev, currentTask.id]);
+      setTimeout(() => {
+        setCurrentTaskIdx((idx) => {
+          const next = idx + 1;
+          if (next < tasks.length) {
+            setEditorCode(tasks[next].starterCode);
+          }
+          return next;
+        });
+        setSubmitStatus('idle');
+        setTestResults([]);
+      }, 800);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remoteCompletedIds]);
 
   // Sync editor when navigating to a different task
   useEffect(() => {
@@ -143,10 +171,13 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
       const allPassed = results.length > 0 && results.every((r) => r.passed);
 
       if (allPassed) {
-        const nextCompleted = [...completedTaskIds, currentTask.id];
-        setCompletedTaskIds(nextCompleted);
+        const taskId = currentTask.id;
+        // Add to local completed set
+        setLocalCompletedIds((prev) => prev.includes(taskId) ? prev : [...prev, taskId]);
         setSubmitStatus('correct');
-        onTasksCompleted(nextCompleted.length);
+        // Broadcast to all other players
+        onTaskCompleted(taskId);
+        onTasksCompleted(completedTaskIds.length + 1);
 
         setTimeout(() => {
           const nextIdx = currentTaskIdx + 1;
@@ -163,7 +194,7 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
         setSubmitStatus('incorrect');
       }
     }, 120);
-  }, [currentTask, editorCode, completedTaskIds, currentTaskIdx, tasks]);
+  }, [currentTask, editorCode, completedTaskIds, currentTaskIdx, tasks, onTaskCompleted, onTasksCompleted]);
 
   const handleChatSend = useCallback(() => {
     if (!chatInput.trim()) return;

@@ -43,8 +43,9 @@ export interface StartMeetingPayload { roomId: string }
 export interface CastVotePayload     { roomId: string; targetId: string | 'SKIP' }
 export interface TaskProgressPayload { roomId: string; count: number }
 export interface NextRoundPayload    { roomId: string }
-export interface CodeChangePayload   { roomId: string; code: string; taskId: string }
-export interface ChatMessagePayload  { roomId: string; text: string }
+export interface CodeChangePayload    { roomId: string; code: string; taskId: string }
+export interface ChatMessagePayload   { roomId: string; text: string }
+export interface TaskCompletedPayload { roomId: string; taskId: string }
 
 // ── Payloads: Server → Client ─────────────────────────────────────────────────
 
@@ -120,6 +121,11 @@ export interface ChatBroadcastPayload {
   text: string;
 }
 
+export interface TaskCompletionBroadcastPayload {
+  taskId: string;
+  completedBy: string; // username
+}
+
 // ── Typed event maps ──────────────────────────────────────────────────────────
 
 export interface ClientToServerEvents {
@@ -131,8 +137,9 @@ export interface ClientToServerEvents {
   cast_vote:     (payload: CastVotePayload)      => void;
   task_progress: (payload: TaskProgressPayload)  => void;
   next_round:    (payload: NextRoundPayload)     => void;
-  code_change:   (payload: CodeChangePayload)    => void;
-  chat_message:  (payload: ChatMessagePayload)   => void;
+  code_change:    (payload: CodeChangePayload)     => void;
+  chat_message:   (payload: ChatMessagePayload)    => void;
+  task_completed: (payload: TaskCompletedPayload)  => void;
 }
 
 export interface ServerToClientEvents {
@@ -150,7 +157,8 @@ export interface ServerToClientEvents {
   task_progress_update:  (payload: TaskProgressUpdatePayload)   => void;
   game_over:             (payload: GameOverPayload)             => void;
   next_round_started:    (payload: NextRoundStartedPayload)     => void;
-  code_synced:           (payload: CodeSyncedPayload)           => void;
-  chat_broadcast:        (payload: ChatBroadcastPayload)        => void;
+  code_synced:           (payload: CodeSyncedPayload)                   => void;
+  chat_broadcast:        (payload: ChatBroadcastPayload)                => void;
+  task_completion_broadcast: (payload: TaskCompletionBroadcastPayload)  => void;
 }
-}
+

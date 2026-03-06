@@ -13,6 +13,7 @@ import type {
   TaskProgressUpdatePayload,
   CodeSyncedPayload,
   ChatBroadcastPayload,
+  TaskCompletionBroadcastPayload,
 } from '../../../shared/types';
 
 export type RoomStatus =
@@ -39,6 +40,7 @@ export interface UseRoomReturn {
   castEjectionVote: (targetId: string | 'SKIP') => void;
   reportTaskProgress: (count: number) => void;
   broadcastCode: (code: string, taskId: string) => void;
+  broadcastTaskCompleted: (taskId: string) => void;
   sendChat: (text: string) => void;
   // game state
   gamePhase: string;
@@ -57,6 +59,8 @@ export interface UseRoomReturn {
   sharedCode: string;
   sharedCodeTaskId: string;
   sharedCodeSender: string;
+  // shared task completions
+  completedTaskIds: string[];
   // chat
   chatMessages: { username: string; text: string }[];
 }
@@ -83,6 +87,7 @@ export const useRoom = (): UseRoomReturn => {
   const [sharedCode, setSharedCode]             = useState<string>('');
   const [sharedCodeTaskId, setSharedCodeTaskId] = useState('');
   const [sharedCodeSender, setSharedCodeSender] = useState('');
+  const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([]);
   const [chatMessages, setChatMessages]         = useState<{ username: string; text: string }[]>([]);
 
   // store roomId in a ref so socket callbacks always have the latest value
@@ -116,6 +121,7 @@ export const useRoom = (): UseRoomReturn => {
       setCategoryVotes({}); setSelectedCategory('');
       setVoteResult(null); setGameOver(null);
       setTaskProgress({}); setMyTaskIds([]);
+      setCompletedTaskIds([]); setChatMessages([]);
     };
     const onCategoryVoteUpdate = (p: CategoryVoteUpdatePayload) => {
       setCategoryVotes(p.votes);
@@ -160,6 +166,7 @@ export const useRoom = (): UseRoomReturn => {
       setVoteResult(null); setEjectionVotes({});
       setSharedCode(''); setSharedCodeTaskId(''); setSharedCodeSender('');
       setMyTaskIds([]);
+      setCompletedTaskIds([]);
       setChatMessages([]);
       setGamePhase('category_vote');
     };
@@ -170,6 +177,9 @@ export const useRoom = (): UseRoomReturn => {
     };
     const onChatBroadcast = (p: ChatBroadcastPayload) => {
       setChatMessages((prev) => [...prev, { username: p.username, text: p.text }]);
+    };
+    const onTaskCompletionBroadcast = (p: TaskCompletionBroadcastPayload) => {
+      setCompletedTaskIds((prev) => prev.includes(p.taskId) ? prev : [...prev, p.taskId]);
     };
 
     socket.on('connect',               onConnect);
@@ -188,8 +198,9 @@ export const useRoom = (): UseRoomReturn => {
     socket.on('task_progress_update',  onTaskProgressUpdate);
     socket.on('game_over',             onGameOver);
     socket.on('next_round_started',    onNextRoundStarted);
-    socket.on('code_synced',           onCodeSynced);
-    socket.on('chat_broadcast',        onChatBroadcast);
+    socket.on('code_synced',               onCodeSynced);
+    socket.on('chat_broadcast',            onChatBroadcast);
+    socket.on('task_completion_broadcast', onTaskCompletionBroadcast);
 
     return () => {
       socket.off('connect',               onConnect);
@@ -208,8 +219,9 @@ export const useRoom = (): UseRoomReturn => {
       socket.off('task_progress_update',  onTaskProgressUpdate);
       socket.off('game_over',             onGameOver);
       socket.off('next_round_started',    onNextRoundStarted);
-      socket.off('code_synced',           onCodeSynced);
-      socket.off('chat_broadcast',        onChatBroadcast);
+      socket.off('code_synced',               onCodeSynced);
+      socket.off('chat_broadcast',            onChatBroadcast);
+      socket.off('task_completion_broadcast', onTaskCompletionBroadcast);
     };
   }, []);
 
@@ -263,6 +275,11 @@ export const useRoom = (): UseRoomReturn => {
     socket.emit('code_change', { roomId: roomIdRef.current, code, taskId });
   }, []);
 
+  const broadcastTaskCompleted = useCallback((taskId: string) => {
+    if (!roomIdRef.current) return;
+    socket.emit('task_completed', { roomId: roomIdRef.current, taskId });
+  }, []);
+
   const sendChat = useCallback((text: string) => {
     if (!roomIdRef.current || !text.trim()) return;
     socket.emit('chat_message', { roomId: roomIdRef.current, text: text.trim() });
@@ -272,11 +289,12 @@ export const useRoom = (): UseRoomReturn => {
     status, roomId, players, error,
     createRoom, joinRoom, disconnect,
     startGame, castCategoryVote, triggerMeeting, castEjectionVote,
-    reportTaskProgress, broadcastCode, sendChat,
+    reportTaskProgress, broadcastCode, broadcastTaskCompleted, sendChat,
     gamePhase, round, myRole, myTaskIds, categoryVotes, selectedCategory,
     meetingPlayers, meetingTriggeredBy, ejectionVotes, voteResult,
     taskProgress, gameOver,
     sharedCode, sharedCodeTaskId, sharedCodeSender,
+    completedTaskIds,
     chatMessages,
   };
 };

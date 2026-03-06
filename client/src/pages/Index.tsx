@@ -111,6 +111,10 @@ const Index = () => {
     room.reportTaskProgress(count);
   }, [room]);
 
+  const handleTaskCompleted = useCallback((taskId: string) => {
+    room.broadcastTaskCompleted(taskId);
+  }, [room]);
+
   // Meeting screen done (after vote_result reveal delay)
   const handleMeetingComplete = useCallback(() => {
     if (room.gameOver) {
@@ -207,12 +211,14 @@ const Index = () => {
             tasks={roundTasks}
             players={room.players}
             taskProgress={room.taskProgress}
+            completedTaskIds={room.completedTaskIds}
             sharedCode={room.sharedCode}
             sharedCodeTaskId={room.sharedCodeTaskId}
             sharedCodeSender={room.sharedCodeSender}
             chatMessages={room.chatMessages}
             onCodeChange={room.broadcastCode}
             onChatSend={room.sendChat}
+            onTaskCompleted={handleTaskCompleted}
             onEmergency={handleEmergency}
             onTimerEnd={handleTimerEnd}
             onTasksCompleted={handleTasksCompleted}

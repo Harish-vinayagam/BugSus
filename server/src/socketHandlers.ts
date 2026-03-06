@@ -276,6 +276,20 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
     });
   });
 
+  // ── task_completed ─────────────────────────────────────────────────────────
+  socket.on('task_completed', ({ roomId, taskId }) => {
+    const room = getRoom(roomId);
+    if (!room) return;
+    const player = room.players.find((p) => p.id === socket.id);
+    if (!player) return;
+    // Broadcast to ALL players in the room (including sender) so everyone marks it done
+    io.to(roomId).emit('task_completion_broadcast', {
+      taskId,
+      completedBy: player.username,
+    });
+    console.log(`[task_done]   ${player.username} completed ${taskId} in ${roomId}`);
+  });
+
   // ── chat_message ───────────────────────────────────────────────────────────
   socket.on('chat_message', ({ roomId, text }) => {
     const room = getRoom(roomId);
