@@ -44,6 +44,7 @@ export interface CastVotePayload     { roomId: string; targetId: string | 'SKIP'
 export interface TaskProgressPayload { roomId: string; count: number }
 export interface NextRoundPayload    { roomId: string }
 export interface CodeChangePayload   { roomId: string; code: string; taskId: string }
+export interface ChatMessagePayload  { roomId: string; text: string }
 
 // ── Payloads: Server → Client ─────────────────────────────────────────────────
 
@@ -114,6 +115,11 @@ export interface CodeSyncedPayload {
   senderName: string;
 }
 
+export interface ChatBroadcastPayload {
+  username: string;
+  text: string;
+}
+
 // ── Typed event maps ──────────────────────────────────────────────────────────
 
 export interface ClientToServerEvents {
@@ -126,6 +132,7 @@ export interface ClientToServerEvents {
   task_progress: (payload: TaskProgressPayload)  => void;
   next_round:    (payload: NextRoundPayload)     => void;
   code_change:   (payload: CodeChangePayload)    => void;
+  chat_message:  (payload: ChatMessagePayload)   => void;
 }
 
 export interface ServerToClientEvents {
@@ -144,4 +151,5 @@ export interface ServerToClientEvents {
   game_over:             (payload: GameOverPayload)             => void;
   next_round_started:    (payload: NextRoundStartedPayload)     => void;
   code_synced:           (payload: CodeSyncedPayload)           => void;
+  chat_broadcast:        (payload: ChatBroadcastPayload)        => void;
 }

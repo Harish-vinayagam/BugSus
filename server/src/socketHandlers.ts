@@ -56,19 +56,20 @@ const finaliseCategoryVote = (io: GameServer, roomId: string) => {
 
   io.to(roomId).emit('category_selected', { category: winner, votes: tally });
 
-  // Pick task IDs ONCE for this round — stored on room so they're identical for all players
+  // Pick task IDs ONCE for this round — ALL players (engineer + intern) get the same tasks.
+  // The intern's goal is to submit subtly wrong solutions on the same problems.
   room.engineerTaskIds = pickTaskIds(winner, 'engineer', 10);
-  room.internTaskIds   = pickTaskIds(winner, 'intern',   10);
+  room.internTaskIds   = room.engineerTaskIds; // same tasks, intern just sabotages them
 
-  // Assign intern and send each player their private role + task list
+  // Assign intern and send each player their private role + shared task list
   const result = assignRoles(roomId);
   if (!result) return;
 
   const internId = result.internId;
   room.players.forEach((p) => {
     const role: 'engineer' | 'intern' = p.id === internId ? 'intern' : 'engineer';
-    const taskIds = role === 'engineer' ? room.engineerTaskIds : room.internTaskIds;
-    io.to(p.id).emit('role_assigned', { role, round: room.round, taskIds });
+    // Everyone gets the same taskIds — intern just has a different role label
+    io.to(p.id).emit('role_assigned', { role, round: room.round, taskIds: room.engineerTaskIds });
   });
 };
 
@@ -272,6 +273,19 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
       code,
       taskId,
       senderName: player.username,
+    });
+  });
+
+  // ── chat_message ───────────────────────────────────────────────────────────
+  socket.on('chat_message', ({ roomId, text }) => {
+    const room = getRoom(roomId);
+    if (!room) return;
+    const player = room.players.find((p) => p.id === socket.id);
+    if (!player) return;
+    // Broadcast to ALL players in the room (including sender)
+    io.to(roomId).emit('chat_broadcast', {
+      username: player.username,
+      text: text.toUpperCase().slice(0, 200),
     });
   });
 
