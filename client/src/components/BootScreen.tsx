@@ -17,12 +17,21 @@ const BootScreen: React.FC<BootScreenProps> = ({ onSelect }) => {
   useEffect(() => {
     let cancelled = false;
     let attempts = 0;
+    const MAX = 15; // 15 × 3s = 45s — covers Render cold start
+
     const ping = () => {
-      fetch(`${SERVER_URL}/health`)
-        .then(() => { if (!cancelled) setServerStatus('online'); })
+      fetch(`${SERVER_URL}/health`, {
+        signal: AbortSignal.timeout(4000), // give up each attempt after 4s
+        cache: 'no-store',
+      })
+        .then((r) => {
+          if (cancelled) return;
+          if (r.ok) setServerStatus('online');
+          else throw new Error('non-ok');
+        })
         .catch(() => {
           if (cancelled) return;
-          if (++attempts < 10) setTimeout(ping, 3000);
+          if (++attempts < MAX) setTimeout(ping, 3000);
           else setServerStatus('offline');
         });
     };
@@ -90,13 +99,29 @@ const BootScreen: React.FC<BootScreenProps> = ({ onSelect }) => {
             </p>
             {/* Server status indicator */}
             <p className="text-xs font-mono mt-1" style={{
-              color: serverStatus === 'online' ? 'var(--crt-green)'
+              color: serverStatus === 'online'  ? 'var(--crt-green)'
                    : serverStatus === 'offline' ? 'var(--crt-red)'
                    : 'var(--crt-dim)'
             }}>
               {serverStatus === 'checking' && '● CONNECTING TO SERVER...'}
               {serverStatus === 'online'   && '● SERVER ONLINE'}
-              {serverStatus === 'offline'  && '● SERVER UNREACHABLE — CHECK CONNECTION'}
+              {serverStatus === 'offline'  && (
+                <>
+                  ● SERVER SLOW TO RESPOND — YOU CAN STILL TRY CONNECTING
+                  <button
+                    className="ml-3 underline"
+                    style={{ color: 'var(--crt-dim)', fontSize: '0.7rem' }}
+                    onClick={() => {
+                      setServerStatus('checking');
+                      fetch(`${SERVER_URL}/health`, { signal: AbortSignal.timeout(4000), cache: 'no-store' })
+                        .then(r => r.ok && setServerStatus('online'))
+                        .catch(() => setServerStatus('offline'));
+                    }}
+                  >
+                    [RETRY]
+                  </button>
+                </>
+              )}
             </p>
             <div className="mt-6">
               <p className="crt-glow mb-4">ENTER COMMAND:</p>

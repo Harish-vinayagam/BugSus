@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { RoomStatus } from '@/hooks/useRoom';
 
 interface CreateJoinScreenProps {
@@ -27,15 +27,33 @@ const CreateJoinScreen: React.FC<CreateJoinScreenProps> = ({
   const [name, setName] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const [step, setStep] = useState<'name' | 'room' | 'connecting'>('name');
+  // Track whether WE initiated this connection so we don't react to stale in_room status
+  const waitingForRoom = useRef(false);
+  // Keep latest name in a ref so the useEffect below never has a stale closure
+  const nameRef = useRef('');
+  useEffect(() => { nameRef.current = name; }, [name]);
 
-  // When socket confirms we're in the room, advance to lobby
-  if (step === 'connecting' && socketStatus === 'in_room' && socketRoomId) {
-    onSubmit(name, socketRoomId);
-  }
+  // Advance to lobby as soon as the socket confirms room creation/join
+  useEffect(() => {
+    if (waitingForRoom.current && socketStatus === 'in_room' && socketRoomId) {
+      waitingForRoom.current = false;
+      onSubmit(nameRef.current, socketRoomId);
+    }
+  }, [socketStatus, socketRoomId, onSubmit]);
+
+  // Safety-net: if still connecting after 10s with no error, show a manual retry
+  const [timedOut, setTimedOut] = useState(false);
+  useEffect(() => {
+    if (step !== 'connecting') { setTimedOut(false); return; }
+    const t = setTimeout(() => setTimedOut(true), 10_000);
+    return () => clearTimeout(t);
+  }, [step]);
 
   const handleNameSubmit = () => {
     if (!name.trim()) return;
     if (mode === 'create') {
+      waitingForRoom.current = true;
+      setTimedOut(false);
       setStep('connecting');
       onCreateRoom(name.trim());
     } else {
@@ -45,11 +63,13 @@ const CreateJoinScreen: React.FC<CreateJoinScreenProps> = ({
 
   const handleRoomSubmit = () => {
     if (roomCode.trim().length < 4) return;
+    waitingForRoom.current = true;
+    setTimedOut(false);
     setStep('connecting');
     onJoinRoom(roomCode.trim(), name.trim());
   };
 
-  const isConnecting = step === 'connecting' && socketStatus !== 'error';
+  const isConnecting = step === 'connecting' && socketStatus !== 'error' && !timedOut;
 
   return (
     <div className="h-full flex flex-col justify-center font-mono">
@@ -116,12 +136,39 @@ const CreateJoinScreen: React.FC<CreateJoinScreenProps> = ({
               <p className="crt-glow">
                 CALLSIGN: <span className="crt-glow-accent">{name}</span>
               </p>
-              <p className="crt-glow crt-cursor" style={{ color: 'var(--crt-dim)' }}>
-                {mode === 'create' ? '> CREATING ROOM' : `> JOINING ${roomCode}`}
-              </p>
-              <p className="text-xs" style={{ color: 'var(--crt-dim)' }}>
-                ESTABLISHING CONNECTION...
-              </p>
+              {!timedOut ? (
+                <>
+                  <p className="crt-glow crt-cursor" style={{ color: 'var(--crt-dim)' }}>
+                    {mode === 'create' ? '> CREATING ROOM' : `> JOINING ${roomCode}`}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--crt-dim)' }}>
+                    ESTABLISHING CONNECTION...
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="crt-glow" style={{ color: 'var(--crt-amber)' }}>
+                    ⚠ SERVER IS TAKING TOO LONG
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--crt-dim)' }}>
+                    Render free-tier may be cold-starting (~30s).
+                  </p>
+                  <button
+                    className="crt-button"
+                    onClick={() => {
+                      waitingForRoom.current = true;
+                      setTimedOut(false);
+                      if (mode === 'create') onCreateRoom(name.trim());
+                      else onJoinRoom(roomCode.trim(), name.trim());
+                    }}
+                  >
+                    [RETRY]
+                  </button>
+                  <button className="crt-button mt-1" style={{ fontSize: '0.8rem' }} onClick={() => setStep('name')}>
+                    {'<'} BACK
+                  </button>
+                </>
+              )}
             </div>
           )}
 

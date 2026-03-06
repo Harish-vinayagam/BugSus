@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import CRTFrame from '@/components/CRTFrame';
 import CRTIntro from '@/components/CRTIntro';
+import CRTTransition, { styleForScreen } from '@/components/CRTTransition';
 import BootScreen from '@/components/BootScreen';
 import CreateJoinScreen from '@/components/CreateJoinScreen';
 import LobbyScreen from '@/components/LobbyScreen';
@@ -156,117 +157,119 @@ const Index = () => {
     <>
       {!introComplete && <CRTIntro onComplete={() => setIntroComplete(true)} />}
       <CRTFrame>
+        <CRTTransition transitionKey={screen} style={styleForScreen(screen)}>
 
-        {screen === 'boot' && (
-          <BootScreen onSelect={handleBootSelect} />
-        )}
+          {screen === 'boot' && (
+            <BootScreen onSelect={handleBootSelect} />
+          )}
 
-        {(screen === 'create' || screen === 'join') && (
-          <CreateJoinScreen
-            mode={screen}
-            onSubmit={handleCreateJoinSubmit}
-            onBack={() => setScreen('boot')}
-            onCreateRoom={room.createRoom}
-            onJoinRoom={room.joinRoom}
-            socketStatus={room.status}
-            socketRoomId={room.roomId}
-            socketError={room.error}
-          />
-        )}
+          {(screen === 'create' || screen === 'join') && (
+            <CreateJoinScreen
+              mode={screen}
+              onSubmit={handleCreateJoinSubmit}
+              onBack={() => setScreen('boot')}
+              onCreateRoom={room.createRoom}
+              onJoinRoom={room.joinRoom}
+              socketStatus={room.status}
+              socketRoomId={room.roomId}
+              socketError={room.error}
+            />
+          )}
 
-        {screen === 'lobby' && (
-          <LobbyScreen
-            playerName={playerName}
-            roomCode={roomCode || room.roomId}
-            players={room.players}
-            onStart={handleGameStart}
-          />
-        )}
+          {screen === 'lobby' && (
+            <LobbyScreen
+              playerName={playerName}
+              roomCode={roomCode || room.roomId}
+              players={room.players}
+              onStart={handleGameStart}
+            />
+          )}
 
-        {screen === 'category' && (
-          <CategoryVoteScreen
-            round={room.round}
-            totalPlayers={alivePlayers.length}
-            votes={room.categoryVotes}
-            selectedCategory={room.selectedCategory}
-            onVote={room.castCategoryVote}
-            onComplete={() => {/* transition driven by useEffect on role_reveal phase */}}
-          />
-        )}
+          {screen === 'category' && (
+            <CategoryVoteScreen
+              round={room.round}
+              totalPlayers={alivePlayers.length}
+              votes={room.categoryVotes}
+              selectedCategory={room.selectedCategory}
+              onVote={room.castCategoryVote}
+              onComplete={() => {/* transition driven by useEffect on role_reveal phase */}}
+            />
+          )}
 
-        {screen === 'role' && (
-          <RoleRevealScreen
-            role={room.myRole ?? 'engineer'}
-            round={room.round}
-            onComplete={handleRoleComplete}
-          />
-        )}
+          {screen === 'role' && (
+            <RoleRevealScreen
+              role={room.myRole ?? 'engineer'}
+              round={room.round}
+              onComplete={handleRoleComplete}
+            />
+          )}
 
-        {screen === 'game' && (
-          <MainGameScreen
-            playerName={playerName}
-            round={room.round}
-            category={room.selectedCategory}
-            role={room.myRole ?? 'engineer'}
-            tasks={roundTasks}
-            players={room.players}
-            taskProgress={room.taskProgress}
-            completedTaskIds={room.completedTaskIds}
-            sharedCode={room.sharedCode}
-            sharedCodeTaskId={room.sharedCodeTaskId}
-            sharedCodeSender={room.sharedCodeSender}
-            chatMessages={room.chatMessages}
-            onCodeChange={room.broadcastCode}
-            onChatSend={room.sendChat}
-            onTaskCompleted={handleTaskCompleted}
-            onEmergency={handleEmergency}
-            onTimerEnd={handleTimerEnd}
-            onTasksCompleted={handleTasksCompleted}
-          />
-        )}
+          {screen === 'game' && (
+            <MainGameScreen
+              playerName={playerName}
+              round={room.round}
+              category={room.selectedCategory}
+              role={room.myRole ?? 'engineer'}
+              tasks={roundTasks}
+              players={room.players}
+              taskProgress={room.taskProgress}
+              completedTaskIds={room.completedTaskIds}
+              sharedCode={room.sharedCode}
+              sharedCodeTaskId={room.sharedCodeTaskId}
+              sharedCodeSender={room.sharedCodeSender}
+              chatMessages={room.chatMessages}
+              onCodeChange={room.broadcastCode}
+              onChatSend={room.sendChat}
+              onTaskCompleted={handleTaskCompleted}
+              onEmergency={handleEmergency}
+              onTimerEnd={handleTimerEnd}
+              onTasksCompleted={handleTasksCompleted}
+            />
+          )}
 
-        {screen === 'emergency' && (
-          <EmergencyScreen
-            trigger={emergencyTrigger}
-            onComplete={handleEmergencyComplete}
-          />
-        )}
+          {screen === 'emergency' && (
+            <EmergencyScreen
+              trigger={emergencyTrigger}
+              onComplete={handleEmergencyComplete}
+            />
+          )}
 
-        {screen === 'meeting' && (
-          <MeetingScreen
-            playerName={playerName}
-            players={alivePlayers}
-            triggeredBy={room.meetingTriggeredBy}
-            ejectionVotes={room.ejectionVotes}
-            voteResult={room.voteResult}
-            onCastVote={room.castEjectionVote}
-            onComplete={handleMeetingComplete}
-          />
-        )}
+          {screen === 'meeting' && (
+            <MeetingScreen
+              playerName={playerName}
+              players={alivePlayers}
+              triggeredBy={room.meetingTriggeredBy}
+              ejectionVotes={room.ejectionVotes}
+              voteResult={room.voteResult}
+              onCastVote={room.castEjectionVote}
+              onComplete={handleMeetingComplete}
+            />
+          )}
 
-        {screen === 'summary' && room.voteResult && (
-          <RoundSummaryScreen
-            round={room.round}
-            ejected={room.voteResult.ejectedUsername}
-            ejectedWasIntern={room.voteResult.ejectedWasIntern}
-            internName={room.voteResult.internUsername}
-            alivePlayers={alivePlayers.map((p) => p.username)}
-            tasksCompleted={tasksCompleted}
-            totalTasks={roundTasks.length}
-            onComplete={handleSummaryComplete}
-          />
-        )}
+          {screen === 'summary' && room.voteResult && (
+            <RoundSummaryScreen
+              round={room.round}
+              ejected={room.voteResult.ejectedUsername}
+              ejectedWasIntern={room.voteResult.ejectedWasIntern}
+              internName={room.voteResult.internUsername}
+              alivePlayers={alivePlayers.map((p) => p.username)}
+              tasksCompleted={tasksCompleted}
+              totalTasks={roundTasks.length}
+              onComplete={handleSummaryComplete}
+            />
+          )}
 
-        {screen === 'final' && room.gameOver && (
-          <FinalScreen
-            winner={room.gameOver.winner}
-            internName={room.gameOver.internUsername}
-            playerRole={room.myRole ?? 'engineer'}
-            onPlayAgain={handlePlayAgain}
-            onExit={handleExit}
-          />
-        )}
+          {screen === 'final' && room.gameOver && (
+            <FinalScreen
+              winner={room.gameOver.winner}
+              internName={room.gameOver.internUsername}
+              playerRole={room.myRole ?? 'engineer'}
+              onPlayAgain={handlePlayAgain}
+              onExit={handleExit}
+            />
+          )}
 
+        </CRTTransition>
       </CRTFrame>
     </>
   );

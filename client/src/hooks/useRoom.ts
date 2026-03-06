@@ -92,14 +92,21 @@ export const useRoom = (): UseRoomReturn => {
 
   // store roomId in a ref so socket callbacks always have the latest value
   const roomIdRef = useRef('');
+  // Pending create/join stored in refs so the connect handler can flush them
+  const pendingCreate = useRef<string | null>(null);
+  const pendingJoin   = useRef<{ rid: string; username: string } | null>(null);
 
   useEffect(() => {
     const onConnect = () => {
-      setStatus((s) => s === 'connecting' ? 'creating' : s);
+      // Status is advanced by onReconnectEmit (second useEffect).
+      // Nothing to do here — kept so connect_error cleanup has a counterpart.
     };
-    const onConnectError = () => {
+    const onConnectError = (err: Error) => {
+      // Clear any pending emissions so they don't fire on a later reconnect
+      pendingCreate.current = null;
+      pendingJoin.current   = null;
       setStatus('error');
-      setError('Could not reach server. Is it running?');
+      setError(`Could not reach server. ${err?.message ?? 'Is it running?'}`);
     };
     const onRoomCreated = (p: { roomId: string; players: Player[] }) => {
       setRoomId(p.roomId); roomIdRef.current = p.roomId;
@@ -226,22 +233,52 @@ export const useRoom = (): UseRoomReturn => {
   }, []);
 
   // ── Public API ─────────────────────────────────────────────────────────────
+
+  // Single persistent connect handler that flushes any pending create/join
+  useEffect(() => {
+    const onReconnectEmit = () => {
+      if (pendingCreate.current !== null) {
+        const username = pendingCreate.current;
+        pendingCreate.current = null;
+        setStatus('creating');
+        socket.emit('create_room', { username });
+      } else if (pendingJoin.current !== null) {
+        const { rid, username } = pendingJoin.current;
+        pendingJoin.current = null;
+        setStatus('joining');
+        socket.emit('join_room', { roomId: rid, username });
+      }
+    };
+    socket.on('connect', onReconnectEmit);
+    return () => { socket.off('connect', onReconnectEmit); };
+  }, []);
+
   const createRoom = useCallback((username: string) => {
     setStatus('connecting'); setError('');
-    socket.connect();
-    socket.once('connect', () => {
+    pendingCreate.current = username;
+    pendingJoin.current   = null;
+    if (socket.connected) {
+      pendingCreate.current = null;
       setStatus('creating');
       socket.emit('create_room', { username });
-    });
+    } else {
+      socket.connect();
+      // onReconnectEmit above will fire on connect and flush pendingCreate
+    }
   }, []);
 
   const joinRoom = useCallback((rid: string, username: string) => {
     setStatus('connecting'); setError('');
-    socket.connect();
-    socket.once('connect', () => {
+    pendingJoin.current   = { rid, username };
+    pendingCreate.current = null;
+    if (socket.connected) {
+      pendingJoin.current = null;
       setStatus('joining');
       socket.emit('join_room', { roomId: rid, username });
-    });
+    } else {
+      socket.connect();
+      // onReconnectEmit above will fire on connect and flush pendingJoin
+    }
   }, []);
 
   const disconnect = useCallback(() => {

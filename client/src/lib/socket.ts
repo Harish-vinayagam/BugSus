@@ -20,6 +20,7 @@ wakeServer();
 export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SERVER_URL, {
   autoConnect: false,        // connect manually after the user submits their name
   reconnectionAttempts: 10,  // retry up to 10× if server is still cold
-  reconnectionDelay: 2000,   // wait 2s between retries
-  timeout: 30000,            // allow 30s for the initial handshake
+  reconnectionDelay: 500,    // 500ms between retries (was 2000 — way too slow)
+  reconnectionDelayMax: 2000,// cap backoff at 2s
+  timeout: 5000,             // 5s per connect attempt (was 30s — caused long hangs)
 });

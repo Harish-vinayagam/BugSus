@@ -14,6 +14,14 @@ const CLIENT_URL = process.env.CLIENT_URL ?? '*';
 const app = express();
 const httpServer = createServer(app);
 
+// Allow cross-origin requests for plain HTTP routes (e.g. /health)
+app.use((_req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 // ── Socket.IO ────────────────────────────────────────────────────────────────
