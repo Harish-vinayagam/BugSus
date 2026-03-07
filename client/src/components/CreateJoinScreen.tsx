@@ -27,32 +27,39 @@ const CreateJoinScreen: React.FC<CreateJoinScreenProps> = ({
   const [name, setName] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const [step, setStep] = useState<'name' | 'room' | 'connecting'>('name');
-  // Track whether WE initiated this connection so we don't react to stale in_room status
-  const waitingForRoom = useRef(false);
-  // Keep latest name in a ref so the useEffect below never has a stale closure
-  const nameRef = useRef('');
+  const [timedOut, setTimedOut] = useState(false);
+
+  // Keep the latest name accessible without stale closure issues
+  const nameRef   = useRef('');
+  const hasSubmitted = useRef(false); // prevent double-fire
   useEffect(() => { nameRef.current = name; }, [name]);
 
-  // Advance to lobby as soon as the socket confirms room creation/join
+  // ── Transition to lobby the moment socket confirms room creation/join ──────
   useEffect(() => {
-    if (waitingForRoom.current && socketStatus === 'in_room' && socketRoomId) {
-      waitingForRoom.current = false;
+    if (socketStatus === 'in_room' && socketRoomId && !hasSubmitted.current) {
+      hasSubmitted.current = true;
       onSubmit(nameRef.current, socketRoomId);
     }
   }, [socketStatus, socketRoomId, onSubmit]);
 
-  // Safety-net: if still connecting after 10s with no error, show a manual retry
-  const [timedOut, setTimedOut] = useState(false);
+  // Reset hasSubmitted when we go back to idle
+  useEffect(() => {
+    if (socketStatus === 'idle' || socketStatus === 'error') {
+      hasSubmitted.current = false;
+    }
+  }, [socketStatus]);
+
+  // 15s safety-net: show retry if still waiting with no error
   useEffect(() => {
     if (step !== 'connecting') { setTimedOut(false); return; }
-    const t = setTimeout(() => setTimedOut(true), 10_000);
+    const t = setTimeout(() => setTimedOut(true), 15_000);
     return () => clearTimeout(t);
   }, [step]);
 
   const handleNameSubmit = () => {
     if (!name.trim()) return;
     if (mode === 'create') {
-      waitingForRoom.current = true;
+      hasSubmitted.current = false;
       setTimedOut(false);
       setStep('connecting');
       onCreateRoom(name.trim());
@@ -63,10 +70,17 @@ const CreateJoinScreen: React.FC<CreateJoinScreenProps> = ({
 
   const handleRoomSubmit = () => {
     if (roomCode.trim().length < 4) return;
-    waitingForRoom.current = true;
+    hasSubmitted.current = false;
     setTimedOut(false);
     setStep('connecting');
     onJoinRoom(roomCode.trim(), name.trim());
+  };
+
+  const handleRetry = () => {
+    hasSubmitted.current = false;
+    setTimedOut(false);
+    if (mode === 'create') onCreateRoom(nameRef.current);
+    else onJoinRoom(roomCode.trim(), nameRef.current);
   };
 
   const isConnecting = step === 'connecting' && socketStatus !== 'error' && !timedOut;
@@ -155,16 +169,11 @@ const CreateJoinScreen: React.FC<CreateJoinScreenProps> = ({
                   </p>
                   <button
                     className="crt-button"
-                    onClick={() => {
-                      waitingForRoom.current = true;
-                      setTimedOut(false);
-                      if (mode === 'create') onCreateRoom(name.trim());
-                      else onJoinRoom(roomCode.trim(), name.trim());
-                    }}
+                    onClick={handleRetry}
                   >
                     [RETRY]
                   </button>
-                  <button className="crt-button mt-1" style={{ fontSize: '0.8rem' }} onClick={() => setStep('name')}>
+                  <button className="crt-button mt-1" style={{ fontSize: '0.8rem' }} onClick={() => { hasSubmitted.current = false; setStep('name'); }}>
                     {'<'} BACK
                   </button>
                 </>
@@ -179,7 +188,7 @@ const CreateJoinScreen: React.FC<CreateJoinScreenProps> = ({
               <p className="text-sm" style={{ color: 'var(--crt-red)' }}>
                 {socketError}
               </p>
-              <button className="crt-button crt-button-red" onClick={() => setStep('name')}>
+              <button className="crt-button crt-button-red" onClick={() => { hasSubmitted.current = false; setStep('name'); }}>
                 RETRY
               </button>
             </div>
