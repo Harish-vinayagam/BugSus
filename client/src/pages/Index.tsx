@@ -41,14 +41,15 @@ const Index = () => {
     }
   }, [room.gamePhase]);
 
-  // category_selected → compute local tasks then go to role_reveal
+  // category_selected → show the "▶ SELECTED" banner for 1.5s, then go to role reveal
   useEffect(() => {
     if (room.gamePhase === 'role_reveal' && room.selectedCategory && room.myRole) {
-      // Use server-assigned taskIds so all engineers get identical tasks
       if (room.myTaskIds.length > 0) {
         setRoundTasks(getTasksByIds(room.myTaskIds));
       }
-      setScreen('role');
+      // Delay so CategoryVoteScreen can display the winner banner before transitioning
+      const t = setTimeout(() => setScreen('role'), 1500);
+      return () => clearTimeout(t);
     }
   }, [room.gamePhase, room.selectedCategory, room.myRole]);
 
