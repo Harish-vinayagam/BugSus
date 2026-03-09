@@ -518,6 +518,74 @@
   100% { opacity: 1;   filter: brightness(1); }
 }
 
+/* ── STATIC TV (game start → category vote) ──
+   Full-screen white-noise burst like a TV losing signal,
+   then snapping to a new channel.                          */
+
+.crt-tx-static-exit {
+  animation: static-exit 350ms steps(1) forwards;
+}
+.crt-tx-static-enter {
+  animation: static-enter 500ms steps(1) forwards;
+}
+
+/* Exit: screen collapses into noise then goes black */
+@keyframes static-exit {
+  0%   { opacity: 1; filter: brightness(1)   contrast(1)   saturate(1); transform: scaleY(1); }
+  12%  { opacity: 1; filter: brightness(3)   contrast(0.2) saturate(0); transform: scaleY(1); }
+  25%  { opacity: 1; filter: brightness(1.5) contrast(8)   saturate(0) hue-rotate(180deg); transform: scaleY(1.02); }
+  40%  { opacity: 1; filter: brightness(8)   contrast(0.1) saturate(0); transform: scaleY(0.98); }
+  55%  { opacity: 1; filter: brightness(0.3) contrast(12)  saturate(0); transform: scaleY(1.01) translateY(-2px); }
+  70%  { opacity: 1; filter: brightness(5)   contrast(0.1) saturate(0); transform: scaleY(1); }
+  85%  { opacity: 1; filter: brightness(0.1) contrast(1)   saturate(0); transform: scaleY(0.02) scaleX(0.8); }
+  100% { opacity: 0; filter: brightness(0);                              transform: scaleY(0.01) scaleX(0.6); }
+}
+
+/* Enter: screen snaps on from a horizontal line, static clears */
+@keyframes static-enter {
+  0%   { opacity: 0; filter: brightness(0);                               transform: scaleY(0.01) scaleX(0.5); }
+  8%   { opacity: 1; filter: brightness(20) contrast(0.1) saturate(0);   transform: scaleY(0.015) scaleX(1); }
+  18%  { opacity: 1; filter: brightness(6)  contrast(0.2) saturate(0);   transform: scaleY(0.04)  scaleX(1); }
+  30%  { opacity: 1; filter: brightness(4)  contrast(0.5) saturate(0);   transform: scaleY(0.15)  scaleX(1); }
+  42%  { opacity: 1; filter: brightness(3)  contrast(2)   saturate(0);   transform: scaleY(0.5)   scaleX(1); }
+  55%  { opacity: 1; filter: brightness(2)  contrast(4)   saturate(0);   transform: scaleY(0.85)  scaleX(1); }
+  65%  { opacity: 1; filter: brightness(1.8) contrast(6)  saturate(0);   transform: scaleY(1)     scaleX(1); }
+  75%  { opacity: 1; filter: brightness(1.5) contrast(3)  saturate(0.3); transform: scaleY(1)     scaleX(1); }
+  85%  { opacity: 1; filter: brightness(1.2) contrast(1.5) saturate(0.7); transform: scaleY(1)    scaleX(1); }
+  100% { opacity: 1; filter: brightness(1)  contrast(1)   saturate(1);   transform: scaleY(1)     scaleX(1); }
+}
+
+/* Static noise overlay — sits on top of content during the transition */
+.crt-tx-static-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0;
+}
+
+.crt-tx-static-overlay.active {
+  animation: static-overlay 850ms steps(3) forwards;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+}
+
+@keyframes static-overlay {
+  0%   { opacity: 0;    background-position: 0px 0px;       }
+  8%   { opacity: 0.9;  background-position: -30px 15px;    }
+  16%  { opacity: 0.75; background-position: 20px -25px;    }
+  25%  { opacity: 0.95; background-position: -50px 40px;    }
+  33%  { opacity: 0.6;  background-position: 35px -10px;    }
+  42%  { opacity: 0.85; background-position: -15px 55px;    }
+  50%  { opacity: 0.4;  background-position: 60px -35px;    }
+  58%  { opacity: 0.7;  background-position: -40px 20px;    }
+  67%  { opacity: 0.3;  background-position: 25px -50px;    }
+  75%  { opacity: 0.15; background-position: -20px 10px;    }
+  84%  { opacity: 0.05; background-position: 10px -5px;     }
+  100% { opacity: 0;    background-position: 0px 0px;       }
+}
+
 /* ASCII box */
 .ascii-box {
   border: 1px solid var(--crt-dim);

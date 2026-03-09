@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-export type TransitionStyle = 'scan' | 'glitch' | 'dissolve' | 'flicker';
+export type TransitionStyle = 'scan' | 'glitch' | 'dissolve' | 'flicker' | 'static';
 
 interface CRTTransitionProps {
   /** The key that changes to trigger a transition (e.g. the screen name) */
@@ -17,15 +17,18 @@ interface CRTTransitionProps {
 
 /** Pick a style based on the destination screen */
 export const styleForScreen = (screen: string): TransitionStyle => {
-  if (screen === 'emergency' || screen === 'meeting') return 'glitch';
+  if (screen === 'category')                           return 'static';
+  if (screen === 'emergency' || screen === 'meeting')  return 'glitch';
   if (screen === 'role')                               return 'dissolve';
   if (screen === 'final' || screen === 'summary')      return 'flicker';
   return 'scan';
 };
 
-// Durations must match CSS animation lengths below
-const EXIT_MS: Record<TransitionStyle, number>  = { scan: 220, glitch: 180, dissolve: 280, flicker: 260 };
-const ENTER_MS: Record<TransitionStyle, number> = { scan: 260, glitch: 200, dissolve: 320, flicker: 300 };
+// Durations must match CSS animation lengths
+const EXIT_MS:    Record<TransitionStyle, number> = { scan: 220, glitch: 180, dissolve: 280, flicker: 260, static: 350 };
+const ENTER_MS:   Record<TransitionStyle, number> = { scan: 260, glitch: 200, dissolve: 320, flicker: 300, static: 500 };
+// How long the noise overlay stays visible (covers both exit + enter)
+const OVERLAY_MS: Record<TransitionStyle, number> = { scan: 0,   glitch: 0,   dissolve: 0,   flicker: 0,   static: 850 };
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
@@ -41,9 +44,10 @@ const CRTTransition: React.FC<CRTTransitionProps> = ({
   // live `children` prop so that prop updates (e.g. socketStatus changing from
   // 'connecting' → 'in_room') are never swallowed by a stale snapshot.
   const [frozenChildren, setFrozenChildren] = useState<ReactNode>(null);
-  const [phase, setPhase]   = useState<Phase>('idle');
+  const [phase, setPhase]       = useState<Phase>('idle');
   const [activeStyle, setActiveStyle] = useState<TransitionStyle>('scan');
-  const prevKeyRef = useRef(transitionKey);
+  const [showOverlay, setShowOverlay] = useState(false);
+  const prevKeyRef   = useRef(transitionKey);
   const isAnimating  = useRef(false);
 
   useEffect(() => {
@@ -53,21 +57,22 @@ const CRTTransition: React.FC<CRTTransitionProps> = ({
     const ts = style ?? styleForScreen(transitionKey);
     prevKeyRef.current = transitionKey;
 
-    if (isAnimating.current) {
-      // A transition is already running — just let it finish; the new children
-      // will appear naturally when phase goes back to 'idle'.
-      return;
-    }
+    if (isAnimating.current) return;
 
     isAnimating.current = true;
     setActiveStyle(ts);
+
+    // Fire the static noise overlay (for 'static' style only)
+    if (OVERLAY_MS[ts] > 0) {
+      setShowOverlay(true);
+      setTimeout(() => setShowOverlay(false), OVERLAY_MS[ts]);
+    }
 
     // Freeze current children for the exit animation
     setFrozenChildren(children);
     setPhase('exit');
 
     setTimeout(() => {
-      // Exit done — switch to enter phase; clear frozen so live children render
       setFrozenChildren(null);
       setPhase('enter');
       setTimeout(() => {
@@ -78,12 +83,12 @@ const CRTTransition: React.FC<CRTTransitionProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transitionKey]);
 
-  const cls = phase === 'idle'
-    ? ''
-    : `crt-tx-${activeStyle}-${phase}`;
+  const cls = phase === 'idle' ? '' : `crt-tx-${activeStyle}-${phase}`;
 
   return (
     <div className={`crt-tx-wrapper ${cls}`} style={{ height: '100%', width: '100%' }}>
+      {/* Static TV noise overlay — only visible during 'static' transitions */}
+      <div className={`crt-tx-static-overlay ${showOverlay ? 'active' : ''}`} />
       {phase === 'exit' && frozenChildren ? frozenChildren : children}
     </div>
   );
