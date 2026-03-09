@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import CRTFrame from '@/components/CRTFrame';
 import CRTIntro from '@/components/CRTIntro';
 import CRTTransition, { styleForScreen } from '@/components/CRTTransition';
@@ -29,19 +29,38 @@ const Index = () => {
   const [emergencyTrigger, setEmergencyTrigger] = useState<'button' | 'timer'>('button');
   const [roundTasks, setRoundTasks]             = useState<Task[]>([]);
   const [tasksCompleted, setTasksCompleted]     = useState(0);
+  // Track whether this is the very first round start vs a next-round transition
+  const gameStartedRef = useRef(false);
+  // Snapshot the vote result so the summary screen stays mounted until
+  // the player navigates away (server clears voteResult on next_round_started)
+  const [summaryVoteResult, setSummaryVoteResult] = useState<import('@/hooks/useRoom').UseRoomReturn['voteResult']>(null);
 
   const room = useRoom();
 
-  // ── React to server-driven phase changes ──────────────────────────────────
-
-  // game_started → ALL players (host + non-host) move to category vote screen
+  // Snapshot voteResult into local state so summary screen stays alive even
+  // after next_round_started clears room.voteResult
   useEffect(() => {
-    if (room.gamePhase === 'category_vote') {
+    if (room.voteResult) setSummaryVoteResult(room.voteResult);
+  }, [room.voteResult]);
+
+  // game_started → go to category screen (first round only)
+  useEffect(() => {
+    if (room.gamePhase === 'category_vote' && !gameStartedRef.current) {
+      gameStartedRef.current = true;
       setScreen('category');
     }
   }, [room.gamePhase]);
 
-  // category_selected → show the "▶ SELECTED" banner for 1.5s, then go to role reveal
+  // next_round_started → stay on summary screen; let its countdown call handleSummaryComplete
+  // which will then setScreen('category'). We just need to make sure gameStartedRef is reset
+  // so the category_vote useEffect above won't block on the 2nd/3rd round.
+  useEffect(() => {
+    if (room.round > 1 && room.gamePhase === 'category_vote') {
+      // Server has advanced the round — summary screen's countdown will call
+      // handleSummaryComplete → setScreen('category'). Allow that transition.
+      gameStartedRef.current = false;
+    }
+  }, [room.round, room.gamePhase]);
   useEffect(() => {
     if (room.gamePhase === 'role_reveal' && room.selectedCategory && room.myRole) {
       if (room.myTaskIds.length > 0) {
@@ -126,14 +145,15 @@ const Index = () => {
     }
   }, [room.gameOver]);
 
-  // Summary screen 5s countdown done → server already fired next_round_started
-  // but give a manual path too
+  // Summary countdown done — navigate to category vote for the new round
   const handleSummaryComplete = useCallback(() => {
+    setSummaryVoteResult(null);
     setScreen('category');
   }, []);
 
   const handlePlayAgain = useCallback(() => {
     room.disconnect();
+    gameStartedRef.current = false;
     setScreen('boot');
     setPlayerName('');
     setRoomCode('');
@@ -143,6 +163,7 @@ const Index = () => {
 
   const handleExit = useCallback(() => {
     room.disconnect();
+    gameStartedRef.current = false;
     setScreen('boot');
     setPlayerName('');
     setRoomCode('');
@@ -247,12 +268,12 @@ const Index = () => {
             />
           )}
 
-          {screen === 'summary' && room.voteResult && (
+          {screen === 'summary' && summaryVoteResult && (
             <RoundSummaryScreen
-              round={room.round}
-              ejected={room.voteResult.ejectedUsername}
-              ejectedWasIntern={room.voteResult.ejectedWasIntern}
-              internName={room.voteResult.internUsername}
+              round={room.round > 1 ? room.round - 1 : room.round}
+              ejected={summaryVoteResult.ejectedUsername}
+              ejectedWasIntern={summaryVoteResult.ejectedWasIntern}
+              internName={summaryVoteResult.internUsername}
               alivePlayers={alivePlayers.map((p) => p.username)}
               tasksCompleted={tasksCompleted}
               totalTasks={roundTasks.length}
