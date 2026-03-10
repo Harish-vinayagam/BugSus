@@ -78,19 +78,47 @@
 
 /* ===== CRT EFFECTS ===== */
 
-/* Fine scanlines — static, very subtle */
+/* Fine scanlines — double-frequency: thin dark lines + a faint rolling band */
 .crt-scanlines {
   pointer-events: none;
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 3px,
-    rgba(0, 0, 0, 0.06) 3px,
-    rgba(0, 0, 0, 0.06) 4px
-  );
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.10) 2px,
+      rgba(0, 0, 0, 0.10) 3px
+    );
   z-index: 10;
+  animation: scanline-roll 8s linear infinite;
+}
+
+@keyframes scanline-roll {
+  0%   { background-position: 0 0; }
+  100% { background-position: 0 200px; }
+}
+
+/* Concave screen shadow — deepens the 4 edges to look like a curved tube face */
+.crt-concave {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  /*
+   * Four directional inner shadows push darkness in from every edge,
+   * leaving only the centre bright — identical to a convex glass lens
+   * seen from inside the tube.
+   */
+  box-shadow:
+    inset  0    0   40px 15px rgba(0, 0, 0, 0.70),
+    inset  0    0   80px 5px  rgba(0, 0, 0, 0.40),
+    inset  20px 0   40px 0px  rgba(0, 0, 0, 0.30),
+    inset -20px 0   40px 0px  rgba(0, 0, 0, 0.30),
+    inset  0    20px 40px 0px rgba(0, 0, 0, 0.25),
+    inset  0   -20px 40px 0px rgba(0, 0, 0, 0.25);
+  z-index: 11;
 }
 
 /* Phosphor breath — slow, barely-visible luminance pulse */
@@ -555,37 +583,6 @@
   100% { opacity: 1; filter: brightness(1)  contrast(1)   saturate(1);   transform: scaleY(1)     scaleX(1); }
 }
 
-/* Static noise overlay — sits on top of content during the transition */
-.crt-tx-static-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  pointer-events: none;
-  mix-blend-mode: screen;
-  opacity: 0;
-}
-
-.crt-tx-static-overlay.active {
-  animation: static-overlay 850ms steps(3) forwards;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 256px 256px;
-}
-
-@keyframes static-overlay {
-  0%   { opacity: 0;    background-position: 0px 0px;       }
-  8%   { opacity: 0.9;  background-position: -30px 15px;    }
-  16%  { opacity: 0.75; background-position: 20px -25px;    }
-  25%  { opacity: 0.95; background-position: -50px 40px;    }
-  33%  { opacity: 0.6;  background-position: 35px -10px;    }
-  42%  { opacity: 0.85; background-position: -15px 55px;    }
-  50%  { opacity: 0.4;  background-position: 60px -35px;    }
-  58%  { opacity: 0.7;  background-position: -40px 20px;    }
-  67%  { opacity: 0.3;  background-position: 25px -50px;    }
-  75%  { opacity: 0.15; background-position: -20px 10px;    }
-  84%  { opacity: 0.05; background-position: 10px -5px;     }
-  100% { opacity: 0;    background-position: 0px 0px;       }
-}
-
 /* ASCII box */
 .ascii-box {
   border: 1px solid var(--crt-dim);
@@ -602,4 +599,93 @@
   padding: 0 0.5rem;
   color: var(--crt-dim);
   font-size: 0.875rem;
+}
+
+/* ── POWER-ON (boot → create/join) ──
+   Screen shrinks to a dot, then "powers on" with a bright horizontal
+   line that expands into the new content.                          */
+
+.crt-tx-poweron-exit {
+  animation: poweron-exit 200ms ease-in forwards;
+}
+.crt-tx-poweron-enter {
+  animation: poweron-enter 650ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes poweron-exit {
+  0%   { opacity: 1; transform: scaleY(1)    scaleX(1);   filter: brightness(1); }
+  50%  { opacity: 1; transform: scaleY(0.04) scaleX(0.9); filter: brightness(3); }
+  100% { opacity: 0; transform: scaleY(0.01) scaleX(0.5); filter: brightness(0); }
+}
+
+@keyframes poweron-enter {
+  0%   { opacity: 0; transform: scaleY(0.01) scaleX(0.4); filter: brightness(0); }
+  12%  { opacity: 1; transform: scaleY(0.015) scaleX(1);  filter: brightness(18) blur(2px); }
+  28%  { opacity: 1; transform: scaleY(0.04) scaleX(1);   filter: brightness(8)  blur(1px); }
+  45%  { opacity: 1; transform: scaleY(0.25) scaleX(1);   filter: brightness(4)  blur(0.5px); }
+  62%  { opacity: 1; transform: scaleY(0.7)  scaleX(1);   filter: brightness(2); }
+  78%  { opacity: 1; transform: scaleY(1)    scaleX(1);   filter: brightness(1.4); }
+  90%  { opacity: 1; transform: scaleY(1)    scaleX(1);   filter: brightness(1.1); }
+  100% { opacity: 1; transform: scaleY(1)    scaleX(1);   filter: brightness(1); }
+}
+
+/* ── CHANNEL CHANGE (lobby → game, game screen entry) ──
+   Instant brightness blast + horizontal smear, like pressing
+   the channel button on an old TV.                              */
+
+.crt-tx-channel-exit {
+  animation: channel-exit 160ms steps(1) forwards;
+}
+.crt-tx-channel-enter {
+  animation: channel-enter 320ms steps(1) forwards;
+}
+
+@keyframes channel-exit {
+  0%   { opacity: 1; filter: brightness(1)  contrast(1);  transform: translateY(0)   scaleY(1); }
+  20%  { opacity: 1; filter: brightness(6)  contrast(0.1) saturate(0); transform: translateY(0) scaleY(1); }
+  45%  { opacity: 1; filter: brightness(12) contrast(0.05) saturate(0); transform: translateY(2px) scaleY(0.96); }
+  70%  { opacity: 0; filter: brightness(2)  contrast(0.2) saturate(0); transform: translateY(-4px) scaleY(0.04); }
+  100% { opacity: 0; filter: brightness(0);                             transform: translateY(0) scaleY(0.01); }
+}
+
+@keyframes channel-enter {
+  0%   { opacity: 0; filter: brightness(0);               transform: translateY(0) scaleY(0.01); }
+  15%  { opacity: 1; filter: brightness(14) contrast(0.1) saturate(0); transform: scaleY(0.02) scaleX(1); }
+  30%  { opacity: 1; filter: brightness(6)  contrast(0.3) saturate(0); transform: scaleY(0.08); }
+  48%  { opacity: 1; filter: brightness(3)  contrast(1)   saturate(0); transform: scaleY(0.5); }
+  65%  { opacity: 1; filter: brightness(1.8) contrast(1.5) saturate(0.5); transform: scaleY(0.9); }
+  80%  { opacity: 1; filter: brightness(1.3) contrast(1.2) saturate(0.8); transform: scaleY(1); }
+  90%  { opacity: 1; filter: brightness(1.1) contrast(1);               transform: scaleY(1); }
+  100% { opacity: 1; filter: brightness(1)  contrast(1)   saturate(1);  transform: scaleY(1); }
+}
+
+/* Channel static overlay — flashes during channel-change */
+.crt-tx-static-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0;
+}
+
+.crt-tx-static-overlay.active {
+  animation: static-overlay 850ms steps(3) forwards;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+}
+
+@keyframes static-overlay {
+  0%   { opacity: 0;    background-position: 0px 0px;    }
+  8%   { opacity: 0.9;  background-position: -30px 15px; }
+  16%  { opacity: 0.75; background-position: 20px -25px; }
+  25%  { opacity: 0.95; background-position: -50px 40px; }
+  33%  { opacity: 0.6;  background-position: 35px -10px; }
+  42%  { opacity: 0.85; background-position: -15px 55px; }
+  50%  { opacity: 0.4;  background-position: 60px -35px; }
+  58%  { opacity: 0.7;  background-position: -40px 20px; }
+  67%  { opacity: 0.3;  background-position: 25px -50px; }
+  75%  { opacity: 0.15; background-position: -20px 10px; }
+  84%  { opacity: 0.05; background-position: 10px -5px;  }
+  100% { opacity: 0;    background-position: 0px 0px;    }
 }
