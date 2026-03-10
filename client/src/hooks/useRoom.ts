@@ -14,6 +14,7 @@ import type {
   CodeSyncedPayload,
   ChatBroadcastPayload,
   TaskCompletionBroadcastPayload,
+  TimerSyncPayload,
 } from '../../../shared/types';
 
 export type RoomStatus =
@@ -57,6 +58,10 @@ export interface UseRoomReturn {
   sharedCodeSender: string;
   completedTaskIds: string[];
   chatMessages: { username: string; text: string }[];
+  /** Server epoch-ms when the current category-vote window closes (0 = not set) */
+  categoryVoteEndsAt: number;
+  /** Server epoch-ms when the current game coding phase ends (0 = not set) */
+  gameTimerEndsAt: number;
 }
 
 export const useRoom = (): UseRoomReturn => {
@@ -82,6 +87,8 @@ export const useRoom = (): UseRoomReturn => {
   const [sharedCodeSender, setSharedCodeSender]     = useState('');
   const [completedTaskIds, setCompletedTaskIds]     = useState<string[]>([]);
   const [chatMessages, setChatMessages]             = useState<{ username: string; text: string }[]>([]);
+  const [categoryVoteEndsAt, setCategoryVoteEndsAt] = useState<number>(0);
+  const [gameTimerEndsAt, setGameTimerEndsAt]       = useState<number>(0);
 
   const roomIdRef = useRef('');
 
@@ -121,6 +128,7 @@ export const useRoom = (): UseRoomReturn => {
         setVoteResult(null); setGameOver(null);
         setTaskProgress({}); setMyTaskIds([]);
         setCompletedTaskIds([]); setChatMessages([]);
+        setCategoryVoteEndsAt(p.categoryVoteEndsAt);
       },
       onCategoryVoteUpdate: (p: CategoryVoteUpdatePayload) => setCategoryVotes(p.votes),
       onCategorySelected: (p: CategorySelectedPayload) => {
@@ -132,6 +140,7 @@ export const useRoom = (): UseRoomReturn => {
         setMyRole(p.role); setRound(p.round);
         setMyTaskIds(p.taskIds ?? []);
         setGamePhase('role_reveal');
+        setGameTimerEndsAt(p.gameTimerEndsAt);
       },
       onMeetingStarted: (p: MeetingStartedPayload) => {
         setMeetingPlayers(p.players);
@@ -157,11 +166,16 @@ export const useRoom = (): UseRoomReturn => {
         setSharedCode(''); setSharedCodeTaskId(''); setSharedCodeSender('');
         setMyTaskIds([]); setCompletedTaskIds([]); setChatMessages([]);
         setGamePhase('category_vote');
+        setCategoryVoteEndsAt(p.categoryVoteEndsAt);
       },
       onCodeSynced: (p: CodeSyncedPayload) => {
         setSharedCode(p.code);
         setSharedCodeTaskId(p.taskId);
         setSharedCodeSender(p.senderName);
+      },
+      onTimerSync: (p: TimerSyncPayload) => {
+        if (p.phase === 'category_vote') setCategoryVoteEndsAt(p.endsAt);
+        if (p.phase === 'game') setGameTimerEndsAt(p.endsAt);
       },
       onChatBroadcast: (p: ChatBroadcastPayload) =>
         setChatMessages((prev) => [...prev, { username: p.username, text: p.text }]),
@@ -236,5 +250,7 @@ export const useRoom = (): UseRoomReturn => {
     sharedCode, sharedCodeTaskId, sharedCodeSender,
     completedTaskIds,
     chatMessages,
+    categoryVoteEndsAt,
+    gameTimerEndsAt,
   };
 };

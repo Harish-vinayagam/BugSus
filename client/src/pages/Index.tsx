@@ -215,6 +215,7 @@ const Index = () => {
               selectedCategory={room.selectedCategory}
               onVote={room.castCategoryVote}
               onComplete={() => {/* transition driven by useEffect on role_reveal phase */}}
+              timerEndsAt={room.categoryVoteEndsAt}
             />
           )}
 
@@ -246,6 +247,7 @@ const Index = () => {
               onEmergency={handleEmergency}
               onTimerEnd={handleTimerEnd}
               onTasksCompleted={handleTasksCompleted}
+              timerEndsAt={room.gameTimerEndsAt}
             />
           )}
 

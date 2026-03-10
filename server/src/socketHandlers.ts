@@ -24,6 +24,10 @@ type GameSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 const CATEGORY_VOTE_TIMEOUT_MS = 20_000;
 // Auto-advance ejection vote after 30s
 const EJECTION_VOTE_TIMEOUT_MS = 30_000;
+// Game coding phase duration (must match client's original 180s)
+const GAME_TIMER_MS = 180_000;
+// Role-reveal screen duration before game actually starts
+const ROLE_REVEAL_DELAY_MS = 5_000;
 
 const categoryVoteTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const ejectionVoteTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -61,6 +65,10 @@ const finaliseCategoryVote = (io: GameServer, roomId: string) => {
   room.engineerTaskIds = pickTaskIds(winner, 'engineer', 10);
   room.internTaskIds   = room.engineerTaskIds; // same tasks, intern just sabotages them
 
+  // Game timer starts after the role-reveal screen clears (ROLE_REVEAL_DELAY_MS).
+  // We broadcast that deadline with role_assigned so every client has the same endsAt.
+  const gameTimerEndsAt = Date.now() + ROLE_REVEAL_DELAY_MS + GAME_TIMER_MS;
+
   // Assign intern and send each player their private role + shared task list
   const result = assignRoles(roomId);
   if (!result) return;
@@ -69,7 +77,7 @@ const finaliseCategoryVote = (io: GameServer, roomId: string) => {
   room.players.forEach((p) => {
     const role: 'engineer' | 'intern' = p.id === internId ? 'intern' : 'engineer';
     // Everyone gets the same taskIds — intern just has a different role label
-    io.to(p.id).emit('role_assigned', { role, round: room.round, taskIds: room.engineerTaskIds });
+    io.to(p.id).emit('role_assigned', { role, round: room.round, taskIds: room.engineerTaskIds, gameTimerEndsAt });
   });
 
   // Advance phase to 'game' so the meeting guard doesn't block calls
@@ -124,9 +132,12 @@ const finaliseEjectionVote = (io: GameServer, roomId: string) => {
     setTimeout(() => {
       const updatedRoom = advanceRound(roomId);
       if (!updatedRoom) return;
+      const categoryVoteEndsAt = Date.now() + CATEGORY_VOTE_TIMEOUT_MS;
+      categoryVoteTimers.set(roomId, setTimeout(() => finaliseCategoryVote(io, roomId), CATEGORY_VOTE_TIMEOUT_MS));
       io.to(roomId).emit('next_round_started', {
         round: updatedRoom.round,
         players: updatedRoom.players,
+        categoryVoteEndsAt,
       });
     }, 6000);
   }
@@ -175,7 +186,8 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
     // All players alive at start
     room.players.forEach((p) => { p.alive = true; });
 
-    io.to(roomId).emit('game_started', { players: room.players, round: 1 });
+    const categoryVoteEndsAt = Date.now() + CATEGORY_VOTE_TIMEOUT_MS;
+    io.to(roomId).emit('game_started', { players: room.players, round: 1, categoryVoteEndsAt });
 
     // Start category vote timeout
     categoryVoteTimers.set(roomId, setTimeout(() => finaliseCategoryVote(io, roomId), CATEGORY_VOTE_TIMEOUT_MS));
@@ -216,6 +228,8 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
       players: room.players.filter((p) => p.alive),
       triggeredBy: trigger?.username ?? 'UNKNOWN',
     });
+    // Signal clients to stop their game timer immediately
+    io.to(roomId).emit('timer_sync', { phase: 'game', endsAt: Date.now() });
 
     // Start ejection vote timeout
     ejectionVoteTimers.set(roomId, setTimeout(() => finaliseEjectionVote(io, roomId), EJECTION_VOTE_TIMEOUT_MS));
@@ -262,7 +276,9 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
     if (!room || room.hostId !== socket.id) return;
     const updated = advanceRound(roomId);
     if (updated) {
-      io.to(roomId).emit('next_round_started', { round: updated.round, players: updated.players });
+      const categoryVoteEndsAt = Date.now() + CATEGORY_VOTE_TIMEOUT_MS;
+      categoryVoteTimers.set(roomId, setTimeout(() => finaliseCategoryVote(io, roomId), CATEGORY_VOTE_TIMEOUT_MS));
+      io.to(roomId).emit('next_round_started', { round: updated.round, players: updated.players, categoryVoteEndsAt });
     }
   });
 

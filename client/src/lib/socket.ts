@@ -24,6 +24,7 @@ import type {
   CodeSyncedPayload,
   ChatBroadcastPayload,
   TaskCompletionBroadcastPayload,
+  TimerSyncPayload,
 } from '../../../shared/types';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? 'http://localhost:3001';
@@ -81,10 +82,11 @@ export interface SocketHandlers {
   onRoomJoined:               (p: { roomId: string; players: Player[] }) => void;
   onPlayerListUpdate:         (p: { roomId: string; players: Player[] }) => void;
   onRoomError:                (p: { message: string }) => void;
-  onGameStarted:              (p: { players: Player[]; round: number }) => void;
+  onGameStarted:              (p: { players: Player[]; round: number; categoryVoteEndsAt: number }) => void;
   onCategoryVoteUpdate:       (p: CategoryVoteUpdatePayload) => void;
   onCategorySelected:         (p: CategorySelectedPayload) => void;
   onRoleAssigned:             (p: RoleAssignedPayload) => void;
+  onTimerSync:                (p: TimerSyncPayload) => void;
   onMeetingStarted:           (p: MeetingStartedPayload) => void;
   onEjectionVoteUpdate:       (p: EjectionVoteUpdatePayload) => void;
   onVoteResult:               (p: VoteResultPayload) => void;
@@ -109,6 +111,7 @@ let handlers: SocketHandlers = {
   onCategoryVoteUpdate:       noop,
   onCategorySelected:         noop,
   onRoleAssigned:             noop,
+  onTimerSync:                noop,
   onMeetingStarted:           noop,
   onEjectionVoteUpdate:       noop,
   onVoteResult:               noop,
@@ -191,6 +194,7 @@ socket.on('game_started',              (p) => handlers.onGameStarted(p));
 socket.on('category_vote_update',      (p) => handlers.onCategoryVoteUpdate(p));
 socket.on('category_selected',         (p) => handlers.onCategorySelected(p));
 socket.on('role_assigned',             (p) => handlers.onRoleAssigned(p));
+socket.on('timer_sync',                (p) => handlers.onTimerSync(p));
 socket.on('meeting_started',           (p) => handlers.onMeetingStarted(p));
 socket.on('ejection_vote_update',      (p) => handlers.onEjectionVoteUpdate(p));
 socket.on('vote_result',               (p) => handlers.onVoteResult(p));

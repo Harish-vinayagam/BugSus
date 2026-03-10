@@ -25,6 +25,8 @@ interface MainGameScreenProps {
   onEmergency: () => void;
   onTimerEnd: () => void;
   onTasksCompleted: (count: number) => void;
+  /** Server epoch-ms when this game coding phase ends — drives the shared countdown */
+  timerEndsAt: number;
 }
 
 type SubmitStatus = 'idle' | 'running' | 'correct' | 'incorrect';
@@ -50,6 +52,7 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   onEmergency,
   onTimerEnd,
   onTasksCompleted,
+  timerEndsAt,
 }) => {
   // ── Task state ──────────────────────────────────────────────────────────────
   // Local completed set merges with the server-broadcast set
@@ -66,7 +69,7 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   const [testResults, setTestResults] = useState<TestResult[]>([]);
 
   // ── Game / UI state ─────────────────────────────────────────────────────────
-  const [timer, setTimer] = useState(180);
+  const [timer, setTimer] = useState(() => Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000)));
   const [chatInput, setChatInput] = useState('');
   const chatRef = useRef<HTMLDivElement>(null);
   const broadcastDebounce = useRef<ReturnType<typeof setTimeout>>();
@@ -120,20 +123,24 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTaskIdx]);
 
-  // ── Timer ───────────────────────────────────────────────────────────────────
+  // ── Timer — wall-clock driven so all clients stay in sync ──────────────────
+  // Re-seed whenever the server provides a new deadline
   useEffect(() => {
+    setTimer(Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000)));
+  }, [timerEndsAt]);
+
+  useEffect(() => {
+    if (timerEndsAt === 0) return;
     const interval = setInterval(() => {
-      setTimer((t) => {
-        if (t <= 1) {
-          clearInterval(interval);
-          onTimerEnd();
-          return 0;
-        }
-        return t - 1;
-      });
+      const remaining = Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000));
+      setTimer(remaining);
+      if (remaining === 0) {
+        clearInterval(interval);
+        onTimerEnd();
+      }
     }, 1000);
     return () => clearInterval(interval);
-  }, [onTimerEnd]);
+  }, [timerEndsAt, onTimerEnd]);
 
   // ── Simulated incoming chat ─────────────────────────────────────────────────
   // (No fake bots — real players type in the chat input)

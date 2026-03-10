@@ -7,16 +7,38 @@ interface CategoryVoteScreenProps {
   onVote: (category: string) => void;
   onComplete: (category: string) => void;
   selectedCategory: string;        // set by server when voting ends
+  /** Server epoch-ms when the vote window closes — drives the shared countdown. */
+  timerEndsAt: number;
 }
 
 const CATEGORIES = ['FRONTEND', 'BACKEND', 'OOPS', 'DSA'];
-const VOTE_TIMEOUT = 30;
+
+/** Remaining whole seconds until an absolute epoch-ms deadline. */
+const secondsLeft = (endsAt: number) =>
+  Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
 
 const CategoryVoteScreen: React.FC<CategoryVoteScreenProps> = ({
-  round, totalPlayers, votes, onVote, onComplete, selectedCategory,
+  round, totalPlayers, votes, onVote, onComplete, selectedCategory, timerEndsAt,
 }) => {
-  const [timer, setTimer] = useState(VOTE_TIMEOUT);
+  // Initialise directly from server deadline — no "30s" flash for late joiners
+  const [timer, setTimer] = useState(() => secondsLeft(timerEndsAt));
   const [voted, setVoted] = useState(false);
+
+  // Re-seed whenever the server provides a new deadline (next round)
+  useEffect(() => {
+    setTimer(secondsLeft(timerEndsAt));
+  }, [timerEndsAt]);
+
+  // Tick every second by recomputing from the absolute deadline
+  useEffect(() => {
+    if (selectedCategory || timerEndsAt === 0) return;
+    const interval = setInterval(() => {
+      const remaining = secondsLeft(timerEndsAt);
+      setTimer(remaining);
+      if (remaining === 0) clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [selectedCategory, timerEndsAt]);
 
   // Work out which categories are tied for the lead (used for tie UI)
   const tiedCategories = useMemo(() => {
@@ -29,15 +51,6 @@ const CategoryVoteScreen: React.FC<CategoryVoteScreenProps> = ({
   }, [votes]);
 
   const isTied = tiedCategories.length > 1;
-
-  // Visual countdown — server enforces the real deadline
-  useEffect(() => {
-    if (selectedCategory) return;
-    const interval = setInterval(() => {
-      setTimer((t) => Math.max(0, t - 1));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [selectedCategory]);
 
   const handleVote = (cat: string) => {
     if (voted) return;
@@ -138,7 +151,6 @@ const CategoryVoteScreen: React.FC<CategoryVoteScreenProps> = ({
           <p className="crt-glow-accent font-terminal text-xl crt-glitch">
             ▶ {selectedCategory} SELECTED
           </p>
-          {/* Show if this was a random tiebreak */}
           {isTied && (
             <p className="font-terminal text-xs" style={{ color: 'var(--crt-amber)' }}>
               (TIE BROKEN BY RANDOM SELECTION)

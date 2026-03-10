@@ -57,6 +57,12 @@ export interface RoomErrorPayload        { message: string }
 export interface GameStartedPayload {
   players: Player[];
   round: number;
+  categoryVoteEndsAt: number;   // server epoch ms when vote closes
+}
+
+export interface TimerSyncPayload {
+  phase: 'category_vote' | 'game';
+  endsAt: number;               // server epoch ms when this phase ends
 }
 
 export interface CategoryVoteUpdatePayload {
@@ -73,6 +79,7 @@ export interface RoleAssignedPayload {
   role: 'engineer' | 'intern';
   round: number;
   taskIds: string[];   // ordered list of task IDs — same for every player of this role
+  gameTimerEndsAt: number;  // server epoch ms when the game coding phase ends
 }
 
 export interface MeetingStartedPayload {
@@ -108,6 +115,7 @@ export interface GameOverPayload {
 export interface NextRoundStartedPayload {
   round: number;
   players: Player[];
+  categoryVoteEndsAt: number;   // server epoch ms when the new round's vote closes
 }
 
 export interface CodeSyncedPayload {
@@ -151,6 +159,7 @@ export interface ServerToClientEvents {
   category_vote_update:  (payload: CategoryVoteUpdatePayload)   => void;
   category_selected:     (payload: CategorySelectedPayload)     => void;
   role_assigned:         (payload: RoleAssignedPayload)         => void;
+  timer_sync:            (payload: TimerSyncPayload)            => void;
   meeting_started:       (payload: MeetingStartedPayload)       => void;
   ejection_vote_update:  (payload: EjectionVoteUpdatePayload)   => void;
   vote_result:           (payload: VoteResultPayload)           => void;
