@@ -55,11 +55,15 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   timerEndsAt,
 }) => {
   // ── Task state ──────────────────────────────────────────────────────────────
-  // Local completed set merges with the server-broadcast set
+  // Local completed set merges with the server-broadcast set (carried across rounds)
   const [localCompletedIds, setLocalCompletedIds] = useState<string[]>([]);
-  // Merge: a task is "done" if either this player or any other player completed it
   const completedTaskIds = Array.from(new Set([...localCompletedIds, ...remoteCompletedIds]));
-  const [currentTaskIdx, setCurrentTaskIdx] = useState(0);
+
+  // Start at the first task not yet completed (so returning players don't repeat done work)
+  const firstIncompleteIdx = tasks.findIndex((t) => !remoteCompletedIds.includes(t.id));
+  const [currentTaskIdx, setCurrentTaskIdx] = useState(() =>
+    firstIncompleteIdx >= 0 ? firstIncompleteIdx : 0
+  );
   const currentTask: Task | null = tasks[currentTaskIdx] ?? null;
 
   const [editorCode, setEditorCode] = useState<string>(
@@ -83,14 +87,17 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
     }
   }, [sharedCode, sharedCodeTaskId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Reset task state when tasks list changes (new round / category)
+  // When the task list changes (new round with fresh tasks), reset editor state
+  // but preserve completed IDs — they carry forward across rounds.
   useEffect(() => {
-    setLocalCompletedIds([]);
-    setCurrentTaskIdx(0);
-    setEditorCode(tasks[0]?.starterCode ?? '');
+    const firstOpen = tasks.findIndex((t) => !remoteCompletedIds.includes(t.id));
+    const startIdx = firstOpen >= 0 ? firstOpen : 0;
+    setCurrentTaskIdx(startIdx);
+    setEditorCode(tasks[startIdx]?.starterCode ?? '');
     setSubmitStatus('idle');
     setTestResults([]);
-  }, [tasks]);
+    // Do NOT reset localCompletedIds — carry them forward
+  }, [tasks]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-advance when another player completes the task we're currently on
   useEffect(() => {

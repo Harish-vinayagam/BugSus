@@ -161,12 +161,16 @@ export const useRoom = (): UseRoomReturn => {
       onGameOver: (p: GameOverPayload) => { setGameOver(p); setGamePhase('final'); },
       onNextRoundStarted: (p: NextRoundStartedPayload) => {
         setRound(p.round); setPlayers(p.players);
-        setCategoryVotes({}); setSelectedCategory('');
+        // Keep category, completed tasks — same challenge continues
+        setSelectedCategory(p.category);
+        setMyTaskIds(p.taskIds);
         setVoteResult(null); setEjectionVotes({});
         setSharedCode(''); setSharedCodeTaskId(''); setSharedCodeSender('');
-        setMyTaskIds([]); setCompletedTaskIds([]); setChatMessages([]);
-        setGamePhase('category_vote');
-        setCategoryVoteEndsAt(p.categoryVoteEndsAt);
+        // DO NOT clear completedTaskIds — carry forward
+        setChatMessages([]);
+        // Skip category vote; role_assigned will follow immediately from server
+        setGamePhase('role_reveal');
+        setGameTimerEndsAt(p.gameTimerEndsAt);
       },
       onCodeSynced: (p: CodeSyncedPayload) => {
         setSharedCode(p.code);

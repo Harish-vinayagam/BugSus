@@ -51,26 +51,17 @@ const Index = () => {
     }
   }, [room.gamePhase]);
 
-  // next_round_started → stay on summary screen; let its countdown call handleSummaryComplete
-  // which will then setScreen('category'). We just need to make sure gameStartedRef is reset
-  // so the category_vote useEffect above won't block on the 2nd/3rd round.
-  useEffect(() => {
-    if (room.round > 1 && room.gamePhase === 'category_vote') {
-      // Server has advanced the round — summary screen's countdown will call
-      // handleSummaryComplete → setScreen('category'). Allow that transition.
-      gameStartedRef.current = false;
-    }
-  }, [room.round, room.gamePhase]);
+  // role_reveal → go to role screen (both first round via category vote AND next rounds via next_round_started)
   useEffect(() => {
     if (room.gamePhase === 'role_reveal' && room.selectedCategory && room.myRole) {
       if (room.myTaskIds.length > 0) {
         setRoundTasks(getTasksByIds(room.myTaskIds));
       }
-      // Delay so CategoryVoteScreen can display the winner banner before transitioning
+      // Delay so any winner banner can display before transitioning
       const t = setTimeout(() => setScreen('role'), 1500);
       return () => clearTimeout(t);
     }
-  }, [room.gamePhase, room.selectedCategory, room.myRole]);
+  }, [room.gamePhase, room.selectedCategory, room.myRole, room.round]);
 
   // meeting_started → emergency interstitial first
   useEffect(() => {
@@ -145,10 +136,12 @@ const Index = () => {
     }
   }, [room.gameOver]);
 
-  // Summary countdown done — navigate to category vote for the new round
+  // Summary countdown done — server will fire role_assigned shortly after,
+  // which flips gamePhase → role_reveal and our useEffect navigates to 'role'.
+  // Just clear the snapshot so the summary unmounts cleanly.
   const handleSummaryComplete = useCallback(() => {
     setSummaryVoteResult(null);
-    setScreen('category');
+    // Navigation handled by the role_reveal useEffect above
   }, []);
 
   const handlePlayAgain = useCallback(() => {

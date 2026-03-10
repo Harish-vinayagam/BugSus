@@ -127,17 +127,44 @@ const finaliseEjectionVote = (io: GameServer, roomId: string) => {
       });
     }, 4000);
   } else {
-    // Continue — show summary, then next round
+    // Continue — show summary, then start next round with the SAME category
     room.phase = 'summary';
     setTimeout(() => {
       const updatedRoom = advanceRound(roomId);
       if (!updatedRoom) return;
-      const categoryVoteEndsAt = Date.now() + CATEGORY_VOTE_TIMEOUT_MS;
-      categoryVoteTimers.set(roomId, setTimeout(() => finaliseCategoryVote(io, roomId), CATEGORY_VOTE_TIMEOUT_MS));
+
+      // Skip category vote — reuse the same category and pick fresh tasks for it
+      updatedRoom.engineerTaskIds = pickTaskIds(updatedRoom.category, 'engineer', 10);
+      updatedRoom.internTaskIds   = updatedRoom.engineerTaskIds;
+
+      // Compute game timer (role-reveal delay + coding time)
+      const gameTimerEndsAt = Date.now() + ROLE_REVEAL_DELAY_MS + GAME_TIMER_MS;
+
+      // Re-assign roles for this round and send each player their info
+      const roleResult = assignRoles(roomId);
+      if (!roleResult) return;
+      const internId = roleResult.internId;
+
+      updatedRoom.players.forEach((p) => {
+        const role: 'engineer' | 'intern' = p.id === internId ? 'intern' : 'engineer';
+        io.to(p.id).emit('role_assigned', {
+          role,
+          round: updatedRoom.round,
+          taskIds: updatedRoom.engineerTaskIds,
+          gameTimerEndsAt,
+        });
+      });
+
+      updatedRoom.phase = 'game';
+
       io.to(roomId).emit('next_round_started', {
         round: updatedRoom.round,
         players: updatedRoom.players,
-        categoryVoteEndsAt,
+        // No category vote this round — categoryVoteEndsAt = 0 signals skip
+        categoryVoteEndsAt: 0,
+        category: updatedRoom.category,
+        taskIds: updatedRoom.engineerTaskIds,
+        gameTimerEndsAt,
       });
     }, 6000);
   }
@@ -270,15 +297,29 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
 
   // ── next_round (host acks summary screen done) ────────────────────────────
   socket.on('next_round', ({ roomId }) => {
-    // The server already advances the round via finaliseEjectionVote timeout.
-    // This event is kept for manual/debug use or if we want instant advance.
     const room = getRoom(roomId);
     if (!room || room.hostId !== socket.id) return;
     const updated = advanceRound(roomId);
     if (updated) {
-      const categoryVoteEndsAt = Date.now() + CATEGORY_VOTE_TIMEOUT_MS;
-      categoryVoteTimers.set(roomId, setTimeout(() => finaliseCategoryVote(io, roomId), CATEGORY_VOTE_TIMEOUT_MS));
-      io.to(roomId).emit('next_round_started', { round: updated.round, players: updated.players, categoryVoteEndsAt });
+      updated.engineerTaskIds = pickTaskIds(updated.category, 'engineer', 10);
+      updated.internTaskIds   = updated.engineerTaskIds;
+      const gameTimerEndsAt = Date.now() + ROLE_REVEAL_DELAY_MS + GAME_TIMER_MS;
+      const roleResult = assignRoles(roomId);
+      if (!roleResult) return;
+      const internId = roleResult.internId;
+      updated.players.forEach((p) => {
+        const role: 'engineer' | 'intern' = p.id === internId ? 'intern' : 'engineer';
+        io.to(p.id).emit('role_assigned', { role, round: updated.round, taskIds: updated.engineerTaskIds, gameTimerEndsAt });
+      });
+      updated.phase = 'game';
+      io.to(roomId).emit('next_round_started', {
+        round: updated.round,
+        players: updated.players,
+        categoryVoteEndsAt: 0,
+        category: updated.category,
+        taskIds: updated.engineerTaskIds,
+        gameTimerEndsAt,
+      });
     }
   });
 

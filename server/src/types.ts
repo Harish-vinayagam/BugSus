@@ -115,7 +115,10 @@ export interface GameOverPayload {
 export interface NextRoundStartedPayload {
   round: number;
   players: Player[];
-  categoryVoteEndsAt: number;   // server epoch ms when the new round's vote closes
+  categoryVoteEndsAt: number;
+  category: string;
+  taskIds: string[];
+  gameTimerEndsAt: number;
 }
 
 export interface CodeSyncedPayload {

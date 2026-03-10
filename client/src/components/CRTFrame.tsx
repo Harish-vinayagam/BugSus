@@ -42,21 +42,26 @@ const CRTFrame: React.FC<CRTFrameProps> = ({ children }) => {
           style={{
             width: '100%',
             height: '100%',
-            /* Tight corner radius — CRT tubes have gently rounded corners */
-            borderRadius: '12px',
+            /*
+             * A larger border-radius on the glass makes the corners recede
+             * more — the bigger the radius, the more tube-like it looks.
+             */
+            borderRadius: '22px',
             background: '#0b0f0b',
             /*
-             * Concave depth illusion:
-             *  1. Deep inward shadow at all edges
-             *  2. Slightly brighter centre (phosphor hotspot)
-             *  3. Dark halo at corners (tube falloff)
+             * Concave depth illusion — multiple inset shadow rings:
+             *  1. Tight black rim at the very edge (glass touching bezel)
+             *  2. Broad mid-shadow — main curvature darkness
+             *  3. Wide outer bloom pulling corners back
+             *  4. Faint green centre glow (phosphor hotspot)
              */
             boxShadow:
-              'inset 0 0 0 1px rgba(0,0,0,0.9), ' +
-              'inset 0 0 60px 10px rgba(0,0,0,0.85), ' +
-              'inset 0 0 120px 20px rgba(0,0,0,0.5), ' +
-              'inset 0 0 8px  2px  rgba(51,255,51,0.06), ' +
-              '0 0 2px #000',
+              'inset 0 0 0   2px  rgba(0,0,0,0.85), ' +
+              'inset 0 0 40px 15px rgba(0,0,0,0.60), ' +
+              'inset 0 0 100px 30px rgba(0,0,0,0.40), ' +
+              'inset 0 0 180px 40px rgba(0,0,0,0.25), ' +
+              'inset 0 0 12px  4px  rgba(51,255,51,0.07), ' +
+              '0 0 4px #000',
           }}
         >
           {/* Barrel-distortion SVG filter — applied to content only */}
@@ -170,7 +175,7 @@ const CRTFrame: React.FC<CRTFrameProps> = ({ children }) => {
               inset: 0,
               borderRadius: '12px',
               background:
-                'radial-gradient(ellipse at 50% 50%, transparent 60%, rgba(0,0,0,0.45) 100%)',
+                'radial-gradient(ellipse at 50% 50%, transparent 60%, rgba(0,0,0,0.20) 100%)',
               zIndex: 12,
             }}
           />

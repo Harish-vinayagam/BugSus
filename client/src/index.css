@@ -107,17 +107,21 @@
   inset: 0;
   border-radius: 12px;
   /*
-   * Four directional inner shadows push darkness in from every edge,
-   * leaving only the centre bright — identical to a convex glass lens
-   * seen from inside the tube.
+   * Layered inset shadows produce a strong barrel-curve depth:
+   *  - Tight inner ring: very dark immediate edge
+   *  - Mid ring: broad gradient darkness
+   *  - Wide outer bloom: corner-pull vignette
+   * Combined they make the centre appear to float forward like a convex lens.
    */
   box-shadow:
-    inset  0    0   40px 15px rgba(0, 0, 0, 0.70),
-    inset  0    0   80px 5px  rgba(0, 0, 0, 0.40),
-    inset  20px 0   40px 0px  rgba(0, 0, 0, 0.30),
-    inset -20px 0   40px 0px  rgba(0, 0, 0, 0.30),
-    inset  0    20px 40px 0px rgba(0, 0, 0, 0.25),
-    inset  0   -20px 40px 0px rgba(0, 0, 0, 0.25);
+    inset  0    0    6px  4px  rgba(0, 0, 0, 0.70),
+    inset  0    0   30px  12px rgba(0, 0, 0, 0.50),
+    inset  0    0   80px  20px rgba(0, 0, 0, 0.35),
+    inset  0    0  140px  30px rgba(0, 0, 0, 0.20),
+    inset  30px 0   60px  0px  rgba(0, 0, 0, 0.25),
+    inset -30px 0   60px  0px  rgba(0, 0, 0, 0.25),
+    inset  0    30px 60px 0px  rgba(0, 0, 0, 0.20),
+    inset  0   -30px 60px 0px  rgba(0, 0, 0, 0.20);
   z-index: 11;
 }
 

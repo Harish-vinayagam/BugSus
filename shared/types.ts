@@ -115,7 +115,10 @@ export interface GameOverPayload {
 export interface NextRoundStartedPayload {
   round: number;
   players: Player[];
-  categoryVoteEndsAt: number;   // server epoch ms when the new round's vote closes
+  categoryVoteEndsAt: number;   // 0 = skip category vote, go straight to role reveal
+  category: string;             // same category carried forward
+  taskIds: string[];            // fresh task list for the round
+  gameTimerEndsAt: number;      // server epoch-ms when this round's coding phase ends
 }
 
 export interface CodeSyncedPayload {
