@@ -30,7 +30,8 @@ export interface UseRoomReturn {
   roomId: string;
   players: Player[];
   error: string;
-  createRoom: (username: string) => void;
+  maxPlayers: number;
+  createRoom: (username: string, maxPlayers: 4 | 6 | 8) => void;
   joinRoom: (roomId: string, username: string) => void;
   disconnect: () => void;
   startGame: () => void;
@@ -69,6 +70,7 @@ export const useRoom = (): UseRoomReturn => {
   const [roomId, setRoomId]   = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
   const [error, setError]     = useState('');
+  const [maxPlayers, setMaxPlayers] = useState<number>(4);
 
   const [gamePhase, setGamePhase]                   = useState('lobby');
   const [round, setRound]                           = useState(1);
@@ -111,12 +113,14 @@ export const useRoom = (): UseRoomReturn => {
         roomIdRef.current = p.roomId;
         setRoomId(p.roomId);
         setPlayers(p.players);
+        setMaxPlayers(p.maxPlayers);
         setStatus('in_room');
       },
       onRoomJoined: (p) => {
         roomIdRef.current = p.roomId;
         setRoomId(p.roomId);
         setPlayers(p.players);
+        setMaxPlayers(p.maxPlayers);
         setStatus('in_room');
       },
       onPlayerListUpdate: (p) => setPlayers(p.players),
@@ -189,9 +193,9 @@ export const useRoom = (): UseRoomReturn => {
   }, []); // runs once on mount — that's all we need
 
   // ── Actions ───────────────────────────────────────────────────────────────
-  const createRoom = useCallback((username: string) => {
+  const createRoom = useCallback((username: string, mp: 4 | 6 | 8 = 4) => {
     setStatus('connecting'); setError('');
-    queueCreate(username);
+    queueCreate(username, mp);
   }, []);
 
   const joinRoom = useCallback((rid: string, username: string) => {
@@ -242,7 +246,7 @@ export const useRoom = (): UseRoomReturn => {
   }, []);
 
   return {
-    status, roomId, players, error,
+    status, roomId, players, error, maxPlayers,
     createRoom, joinRoom, disconnect,
     startGame, castCategoryVote, triggerMeeting, castEjectionVote,
     reportTaskProgress, broadcastCode, broadcastTaskCompleted, sendChat,

@@ -183,7 +183,7 @@ const Index = () => {
               mode={screen}
               onSubmit={handleCreateJoinSubmit}
               onBack={() => setScreen('boot')}
-              onCreateRoom={room.createRoom}
+              onCreateRoom={(username, maxPlayers) => room.createRoom(username, maxPlayers)}
               onJoinRoom={room.joinRoom}
               socketStatus={room.status}
               socketRoomId={room.roomId}
@@ -196,6 +196,7 @@ const Index = () => {
               playerName={playerName}
               roomCode={roomCode || room.roomId}
               players={room.players}
+              maxPlayers={room.maxPlayers}
               onStart={handleGameStart}
             />
           )}

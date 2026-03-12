@@ -23,19 +23,20 @@ export interface Room {
   hostId: string;
   phase: GamePhase;
   round: number;
+  maxPlayers: number;          // 4 | 6 | 8 — set at room creation
   category: string;
   internId: string;
   categoryVotes: Record<string, string>;
   ejectionVotes: Record<string, string>;
   tasksCompleted: Record<string, number>;
   winner: 'engineers' | 'intern' | null;
-  engineerTaskIds: string[];   // same for all engineers, picked by server
-  internTaskIds: string[];     // same for all interns, picked by server
+  engineerTaskIds: string[];
+  internTaskIds: string[];
 }
 
 // ── Payloads: Client → Server ─────────────────────────────────────────────────
 
-export interface CreateRoomPayload   { username: string }
+export interface CreateRoomPayload   { username: string; maxPlayers: 4 | 6 | 8 }
 export interface JoinRoomPayload     { roomId: string; username: string }
 export interface StartGamePayload    { roomId: string }
 export interface CategoryVotePayload { roomId: string; category: string }
@@ -49,8 +50,8 @@ export interface TaskCompletedPayload { roomId: string; taskId: string }
 
 // ── Payloads: Server → Client ─────────────────────────────────────────────────
 
-export interface RoomCreatedPayload      { roomId: string; players: Player[] }
-export interface RoomJoinedPayload       { roomId: string; players: Player[] }
+export interface RoomCreatedPayload      { roomId: string; players: Player[]; maxPlayers: number }
+export interface RoomJoinedPayload       { roomId: string; players: Player[]; maxPlayers: number }
 export interface PlayerListUpdatePayload { roomId: string; players: Player[] }
 export interface RoomErrorPayload        { message: string }
 

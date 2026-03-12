@@ -15,12 +15,13 @@ const generateRoomId = (): string => {
   return id;
 };
 
-const makeRoom = (hostPlayer: Player): Room => ({
+const makeRoom = (hostPlayer: Player, maxPlayers: number): Room => ({
   roomId: generateRoomId(),
   players: [hostPlayer],
   hostId: hostPlayer.id,
   phase: 'lobby',
   round: 1,
+  maxPlayers,
   category: '',
   internId: '',
   categoryVotes: {},
@@ -33,8 +34,8 @@ const makeRoom = (hostPlayer: Player): Room => ({
 
 // ── CRUD ──────────────────────────────────────────────────────────────────────
 
-export const createRoom = (player: Player): Room => {
-  const room = makeRoom(player);
+export const createRoom = (player: Player, maxPlayers: number): Room => {
+  const room = makeRoom(player, maxPlayers);
   rooms.set(room.roomId, room);
   return room;
 };
@@ -42,6 +43,7 @@ export const createRoom = (player: Player): Room => {
 export const joinRoom = (roomId: string, player: Player): Room | null => {
   const room = rooms.get(roomId);
   if (!room) return null;
+  if (room.players.length >= room.maxPlayers) return null;  // room full
   if (!room.players.find((p) => p.id === player.id)) {
     room.players.push(player);
   }
@@ -195,7 +197,7 @@ export const checkWinCondition = (roomId: string): 'engineers' | 'intern' | null
   // Intern was ejected → engineers win
   if (!intern) return 'engineers';
 
-  // Intern outnumbers/equals engineers → intern wins
+  // Intern outnumbers/equals engineers (always 1 intern, so ≤1 engineer left) → intern wins
   const engineers = alive.filter((p) => p.id !== room.internId);
   if (engineers.length <= 1) return 'intern';
 

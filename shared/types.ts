@@ -35,7 +35,7 @@ export interface Room {
 
 // ── Payloads: Client → Server ─────────────────────────────────────────────────
 
-export interface CreateRoomPayload   { username: string }
+export interface CreateRoomPayload   { username: string; maxPlayers: 4 | 6 | 8 }
 export interface JoinRoomPayload     { roomId: string; username: string }
 export interface StartGamePayload    { roomId: string }
 export interface CategoryVotePayload { roomId: string; category: string }
@@ -49,8 +49,8 @@ export interface TaskCompletedPayload { roomId: string; taskId: string }
 
 // ── Payloads: Server → Client ─────────────────────────────────────────────────
 
-export interface RoomCreatedPayload      { roomId: string; players: Player[] }
-export interface RoomJoinedPayload       { roomId: string; players: Player[] }
+export interface RoomCreatedPayload      { roomId: string; players: Player[]; maxPlayers: number }
+export interface RoomJoinedPayload       { roomId: string; players: Player[]; maxPlayers: number }
 export interface PlayerListUpdatePayload { roomId: string; players: Player[] }
 export interface RoomErrorPayload        { message: string }
 

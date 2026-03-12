@@ -173,12 +173,12 @@ const finaliseEjectionVote = (io: GameServer, roomId: string) => {
 export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void => {
 
   // ── create_room ────────────────────────────────────────────────────────────
-  socket.on('create_room', ({ username }) => {
+  socket.on('create_room', ({ username, maxPlayers }) => {
     const player = { id: socket.id, username, alive: true };
-    const room = createRoom(player);
+    const room = createRoom(player, maxPlayers ?? 4);
     socket.join(room.roomId);
-    socket.emit('room_created', { roomId: room.roomId, players: room.players });
-    console.log(`[create_room] ${username} → ${room.roomId}`);
+    socket.emit('room_created', { roomId: room.roomId, players: room.players, maxPlayers: room.maxPlayers });
+    console.log(`[create_room] ${username} → ${room.roomId} (max ${room.maxPlayers})`);
   });
 
   // ── join_room ──────────────────────────────────────────────────────────────
@@ -186,11 +186,17 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
     const player = { id: socket.id, username, alive: true };
     const room = joinRoom(roomId, player);
     if (!room) {
-      socket.emit('room_error', { message: `Room "${roomId}" not found.` });
+      // Check if room exists to give the right error
+      const existing = getRoom(roomId);
+      if (existing) {
+        socket.emit('room_error', { message: `Room "${roomId}" is full (${existing.maxPlayers}/${existing.maxPlayers}).` });
+      } else {
+        socket.emit('room_error', { message: `Room "${roomId}" not found.` });
+      }
       return;
     }
     socket.join(room.roomId);
-    socket.emit('room_joined', { roomId: room.roomId, players: room.players });
+    socket.emit('room_joined', { roomId: room.roomId, players: room.players, maxPlayers: room.maxPlayers });
     socket.to(room.roomId).emit('player_list_update', { roomId: room.roomId, players: room.players });
     console.log(`[join_room]   ${username} → ${room.roomId}`);
   });
@@ -199,8 +205,8 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
   socket.on('start_game', ({ roomId }) => {
     const room = getRoom(roomId);
     if (!room || room.hostId !== socket.id) return;
-    if (room.players.length < 4) {
-      socket.emit('room_error', { message: 'Need 4 players to start.' });
+    if (room.players.length < room.maxPlayers) {
+      socket.emit('room_error', { message: `Need ${room.maxPlayers} players to start.` });
       return;
     }
     room.phase = 'category_vote';

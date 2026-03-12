@@ -41,7 +41,7 @@ export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SER
 
 // ── Pending-emit queue (module level — immune to React) ──────────────────────
 type PendingAction =
-  | { type: 'create'; username: string }
+  | { type: 'create'; username: string; maxPlayers: 4 | 6 | 8 }
   | { type: 'join'; roomId: string; username: string };
 
 let pending: PendingAction | null = null;
@@ -51,16 +51,16 @@ const flushPending = () => {
   const action = pending;
   pending = null;
   if (action.type === 'create') {
-    console.log('[socket] emit create_room', action.username);
-    socket.emit('create_room', { username: action.username });
+    console.log('[socket] emit create_room', action.username, action.maxPlayers);
+    socket.emit('create_room', { username: action.username, maxPlayers: action.maxPlayers });
   } else {
     console.log('[socket] emit join_room', action.username, action.roomId);
     socket.emit('join_room', { roomId: action.roomId, username: action.username });
   }
 };
 
-export const queueCreate = (username: string) => {
-  pending = { type: 'create', username };
+export const queueCreate = (username: string, maxPlayers: 4 | 6 | 8) => {
+  pending = { type: 'create', username, maxPlayers };
   if (socket.connected) flushPending();
   else socket.connect();
 };
@@ -78,8 +78,8 @@ export interface SocketHandlers {
   onConnect:                  () => void;
   onConnectError:             (err: Error) => void;
   onDisconnect:               (reason: string) => void;
-  onRoomCreated:              (p: { roomId: string; players: Player[] }) => void;
-  onRoomJoined:               (p: { roomId: string; players: Player[] }) => void;
+  onRoomCreated:              (p: { roomId: string; players: Player[]; maxPlayers: number }) => void;
+  onRoomJoined:               (p: { roomId: string; players: Player[]; maxPlayers: number }) => void;
   onPlayerListUpdate:         (p: { roomId: string; players: Player[] }) => void;
   onRoomError:                (p: { message: string }) => void;
   onGameStarted:              (p: { players: Player[]; round: number; categoryVoteEndsAt: number }) => void;
@@ -128,8 +128,8 @@ let handlers: SocketHandlers = {
 // We buffer the last room_created / room_joined / room_error payload and replay
 // it immediately when registerHandlers() is called.
 type BufferedEvent =
-  | { event: 'room_created'; payload: { roomId: string; players: Player[] } }
-  | { event: 'room_joined';  payload: { roomId: string; players: Player[] } }
+  | { event: 'room_created'; payload: { roomId: string; players: Player[]; maxPlayers: number } }
+  | { event: 'room_joined';  payload: { roomId: string; players: Player[]; maxPlayers: number } }
   | { event: 'room_error';   payload: { message: string } };
 
 let bufferedRoomEvent: BufferedEvent | null = null;

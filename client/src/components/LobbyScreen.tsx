@@ -5,12 +5,11 @@ interface LobbyScreenProps {
   playerName: string;
   roomCode: string;
   players: Player[];       // live list from socket
+  maxPlayers: number;      // 4 | 6 | 8 — set at room creation
   onStart: () => void;
 }
 
-const MAX_PLAYERS = 4;
-
-const LobbyScreen: React.FC<LobbyScreenProps> = ({ playerName, roomCode, players, onStart }) => {
+const LobbyScreen: React.FC<LobbyScreenProps> = ({ playerName, roomCode, players, maxPlayers, onStart }) => {
   const logRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
   const [copied, setCopied] = useState(false);
@@ -32,7 +31,7 @@ const LobbyScreen: React.FC<LobbyScreenProps> = ({ playerName, roomCode, players
     prevCountRef.current = players.length;
   }, [players]);
 
-  const isFull = players.length >= MAX_PLAYERS;
+  const isFull = players.length >= maxPlayers;
   const isHost = players[0]?.username === playerName;
 
   return (
@@ -56,9 +55,14 @@ const LobbyScreen: React.FC<LobbyScreenProps> = ({ playerName, roomCode, players
           </div>
           <p className="text-xs mt-1" style={{ color: 'var(--crt-dim)' }}>SHARE THIS CODE WITH YOUR TEAM</p>
         </div>
-        <p className="crt-glow font-terminal text-lg" style={{ color: players.length >= MAX_PLAYERS ? 'var(--crt-accent)' : 'var(--crt-dim)' }}>
-          {players.length}/{MAX_PLAYERS} PLAYERS
-        </p>
+        <div className="text-right">
+          <p className="crt-glow font-terminal text-lg" style={{ color: players.length >= maxPlayers ? 'var(--crt-accent)' : 'var(--crt-dim)' }}>
+            {players.length}/{maxPlayers} PLAYERS
+          </p>
+          <p className="text-xs mt-1" style={{ color: 'var(--crt-dim)' }}>
+            1 INTERN + {maxPlayers - 1} ENGINEERS
+          </p>
+        </div>
       </div>
 
       <div className="flex gap-4 flex-1 min-h-0">
@@ -66,7 +70,7 @@ const LobbyScreen: React.FC<LobbyScreenProps> = ({ playerName, roomCode, players
         {/* Player slots */}
         <div className="flex-1 space-y-3">
           <p className="font-terminal text-sm" style={{ color: 'var(--crt-dim)' }}>┌─ CONNECTED CREW ─┐</p>
-          {Array.from({ length: MAX_PLAYERS }).map((_, i) => {
+          {Array.from({ length: maxPlayers }).map((_, i) => {
             const p = players[i];
             const isMe = p?.username === playerName;
             return (
@@ -130,7 +134,7 @@ const LobbyScreen: React.FC<LobbyScreenProps> = ({ playerName, roomCode, players
         >
           {isFull
             ? isHost ? '>> EXECUTE GAME_START <<' : 'WAITING FOR HOST...'
-            : `AWAITING PLAYERS... (${players.length}/${MAX_PLAYERS})`}
+            : `AWAITING PLAYERS... (${players.length}/${maxPlayers})`}
         </button>
         {!isHost && isFull && (
           <p className="text-xs" style={{ color: 'var(--crt-dim)' }}>

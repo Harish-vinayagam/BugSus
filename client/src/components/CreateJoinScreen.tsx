@@ -7,7 +7,7 @@ interface CreateJoinScreenProps {
   onSubmit: (name: string, roomCode: string) => void;
   onBack: () => void;
   /** Injected by Index so this component can trigger socket calls */
-  onCreateRoom: (username: string) => void;
+  onCreateRoom: (username: string, maxPlayers: 4 | 6 | 8) => void;
   onJoinRoom: (roomId: string, username: string) => void;
   socketStatus: RoomStatus;
   socketRoomId: string; // filled once room_created fires
@@ -28,6 +28,7 @@ const CreateJoinScreen: React.FC<CreateJoinScreenProps> = ({
   const [roomCode, setRoomCode] = useState('');
   const [step, setStep] = useState<'name' | 'room' | 'connecting'>('name');
   const [timedOut, setTimedOut] = useState(false);
+  const [maxPlayers, setMaxPlayers] = useState<4 | 6 | 8>(4);
 
   // Keep the latest name accessible without stale closure issues
   const nameRef   = useRef('');
@@ -62,7 +63,7 @@ const CreateJoinScreen: React.FC<CreateJoinScreenProps> = ({
       hasSubmitted.current = false;
       setTimedOut(false);
       setStep('connecting');
-      onCreateRoom(name.trim());
+      onCreateRoom(name.trim(), maxPlayers);
     } else {
       setStep('room');
     }
@@ -79,7 +80,7 @@ const CreateJoinScreen: React.FC<CreateJoinScreenProps> = ({
   const handleRetry = () => {
     hasSubmitted.current = false;
     setTimedOut(false);
-    if (mode === 'create') onCreateRoom(nameRef.current);
+    if (mode === 'create') onCreateRoom(nameRef.current, maxPlayers);
     else onJoinRoom(roomCode.trim(), nameRef.current);
   };
 
@@ -111,6 +112,36 @@ const CreateJoinScreen: React.FC<CreateJoinScreenProps> = ({
                   maxLength={12}
                 />
               </div>
+
+              {/* Player count selector — create mode only */}
+              {mode === 'create' && (
+                <div className="space-y-2">
+                  <p className="crt-glow text-sm" style={{ color: 'var(--crt-dim)' }}>
+                    SELECT CREW SIZE:
+                  </p>
+                  <div className="flex gap-3">
+                    {([4, 6, 8] as const).map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => setMaxPlayers(n)}
+                        className="crt-button font-terminal text-lg px-5 py-2 transition-all"
+                        style={{
+                          color: maxPlayers === n ? 'var(--crt-bg)' : 'var(--crt-green)',
+                          background: maxPlayers === n ? 'var(--crt-green)' : 'transparent',
+                          borderColor: maxPlayers === n ? 'var(--crt-green)' : 'var(--crt-dim)',
+                          boxShadow: maxPlayers === n ? '0 0 10px var(--crt-green)' : 'none',
+                        }}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs" style={{ color: 'var(--crt-dim)' }}>
+                    {maxPlayers} PLAYERS — 1 INTERN + {maxPlayers - 1} ENGINEERS
+                  </p>
+                </div>
+              )}
+
               <button className="crt-button" onClick={handleNameSubmit} disabled={!name.trim()}>
                 CONFIRM
               </button>
