@@ -367,11 +367,7 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
               >
                 <p className="font-terminal text-xs px-2 py-1 flex items-center justify-between" style={{ color: 'var(--crt-dim)', borderBottom: '1px solid #333' }}>
                   <span>┌─ EDITOR ─┐</span>
-                  {sharedCodeSender && sharedCodeTaskId === currentTask?.id && (
-                    <span style={{ color: 'var(--crt-accent)', fontSize: '0.65rem' }}>
-                      ⟳ SYNCED FROM {sharedCodeSender}
-                    </span>
-                  )}
+                  {sharedCodeSender && sharedCodeTaskId === currentTask?.id }
                 </p>
                 <div style={{ height: 'calc(100% - 28px)' }}>
                   <CodeEditor
