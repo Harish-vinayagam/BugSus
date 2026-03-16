@@ -19,6 +19,7 @@ interface MainGameScreenProps {
   sharedCodeTaskId: string;
   sharedCodeSender: string;
   chatMessages: { username: string; text: string }[];
+  manualMeetingUsedThisRound: boolean;  // tracks if emergency meeting was already used
   onCodeChange: (code: string, taskId: string) => void;
   onChatSend: (text: string) => void;
   onTaskCompleted: (taskId: string) => void; // fires once when THIS client completes a task
@@ -46,6 +47,7 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   sharedCodeTaskId,
   sharedCodeSender,
   chatMessages,
+  manualMeetingUsedThisRound,
   onCodeChange,
   onChatSend,
   onTaskCompleted,
@@ -236,10 +238,12 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
           {Math.floor(timer / 60)}:{String(timer % 60).padStart(2, '0')}
         </span>
         <button
-          className="crt-button crt-button-red text-xs px-3 py-1"
+          disabled={manualMeetingUsedThisRound}
+          className={`crt-button crt-button-red text-xs px-3 py-1 ${manualMeetingUsedThisRound ? 'opacity-50 cursor-not-allowed' : ''}`}
           onClick={onEmergency}
+          title={manualMeetingUsedThisRound ? 'Emergency meeting already used this round' : 'Call an emergency meeting'}
         >
-          ⚠ EMERGENCY_MEETING
+          {manualMeetingUsedThisRound ? '✓ MEETING_USED' : '⚠ EMERGENCY_MEETING'}
         </button>
       </div>
 

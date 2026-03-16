@@ -30,6 +30,7 @@ const makeRoom = (hostPlayer: Player, maxPlayers: number): Room => ({
   winner: null,
   engineerTaskIds: [],
   internTaskIds: [],
+  manualMeetingUsedThisRound: false,
 });
 
 // ── CRUD ──────────────────────────────────────────────────────────────────────
@@ -216,6 +217,7 @@ export const advanceRound = (roomId: string): Room | null => {
   room.ejectionVotes = {};
   room.engineerTaskIds = [];
   room.internTaskIds = [];
+  room.manualMeetingUsedThisRound = false;  // reset for new round
   return room;
 };
 

@@ -50,6 +50,7 @@ export interface UseRoomReturn {
   selectedCategory: string;
   meetingPlayers: Player[];
   meetingTriggeredBy: string;
+  manualMeetingUsedThisRound: boolean;  // tracks if emergency meeting was used
   ejectionVotes: Record<string, number>;
   voteResult: VoteResultPayload | null;
   taskProgress: Record<string, number>;
@@ -80,6 +81,7 @@ export const useRoom = (): UseRoomReturn => {
   const [selectedCategory, setSelectedCategory]     = useState('');
   const [meetingPlayers, setMeetingPlayers]         = useState<Player[]>([]);
   const [meetingTriggeredBy, setMeetingTriggeredBy] = useState('');
+  const [manualMeetingUsedThisRound, setManualMeetingUsedThisRound] = useState(false);
   const [ejectionVotes, setEjectionVotes]           = useState<Record<string, number>>({});
   const [voteResult, setVoteResult]                 = useState<VoteResultPayload | null>(null);
   const [taskProgress, setTaskProgress]             = useState<Record<string, number>>({});
@@ -149,6 +151,7 @@ export const useRoom = (): UseRoomReturn => {
       onMeetingStarted: (p: MeetingStartedPayload) => {
         setMeetingPlayers(p.players);
         setMeetingTriggeredBy(p.triggeredBy);
+        setManualMeetingUsedThisRound(p.manualMeetingUsedThisRound);
         setEjectionVotes({}); setVoteResult(null);
         setGamePhase('meeting');
       },
@@ -170,6 +173,7 @@ export const useRoom = (): UseRoomReturn => {
         setMyTaskIds(p.taskIds);
         setVoteResult(null); setEjectionVotes({});
         setSharedCode(''); setSharedCodeTaskId(''); setSharedCodeSender('');
+        setManualMeetingUsedThisRound(false);  // reset for new round
         // DO NOT clear completedTaskIds — carry forward
         setChatMessages([]);
         // Skip category vote; role_assigned will follow immediately from server
@@ -252,7 +256,7 @@ export const useRoom = (): UseRoomReturn => {
     reportTaskProgress, broadcastCode, broadcastTaskCompleted, sendChat,
     gamePhase, round, myRole, myTaskIds,
     categoryVotes, selectedCategory,
-    meetingPlayers, meetingTriggeredBy,
+    meetingPlayers, meetingTriggeredBy, manualMeetingUsedThisRound,
     ejectionVotes, voteResult,
     taskProgress, gameOver,
     sharedCode, sharedCodeTaskId, sharedCodeSender,

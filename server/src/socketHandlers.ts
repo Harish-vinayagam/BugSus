@@ -253,13 +253,21 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
     // Allow meeting from 'game' OR 'role_reveal' (in case player calls it right after reveal)
     if (!room || (room.phase !== 'game' && room.phase !== 'role_reveal')) return;
 
+    // Check if manual emergency meeting has already been used this round
+    if (room.manualMeetingUsedThisRound) {
+      socket.emit('room_error', { message: 'Emergency meeting already used this round.' });
+      return;
+    }
+
     room.phase = 'meeting';
     room.ejectionVotes = {};
+    room.manualMeetingUsedThisRound = true;  // mark as used
 
     const trigger = room.players.find((p) => p.id === socket.id);
     io.to(roomId).emit('meeting_started', {
       players: room.players.filter((p) => p.alive),
       triggeredBy: trigger?.username ?? 'UNKNOWN',
+      manualMeetingUsedThisRound: true,
     });
     // Signal clients to stop their game timer immediately
     io.to(roomId).emit('timer_sync', { phase: 'game', endsAt: Date.now() });

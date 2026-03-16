@@ -85,6 +85,7 @@ export interface RoleAssignedPayload {
 export interface MeetingStartedPayload {
   players: Player[];
   triggeredBy: string;
+  manualMeetingUsedThisRound: boolean;  // inform all clients that manual meeting is now spent
 }
 
 export interface EjectionVoteUpdatePayload {

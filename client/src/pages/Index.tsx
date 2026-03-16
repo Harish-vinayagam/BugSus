@@ -261,6 +261,7 @@ const Index = () => {
               sharedCodeTaskId={room.sharedCodeTaskId}
               sharedCodeSender={room.sharedCodeSender}
               chatMessages={room.chatMessages}
+              manualMeetingUsedThisRound={room.manualMeetingUsedThisRound}
               onCodeChange={room.broadcastCode}
               onChatSend={room.sendChat}
               onTaskCompleted={handleTaskCompleted}

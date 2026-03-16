@@ -32,6 +32,7 @@ export interface Room {
   winner: 'engineers' | 'intern' | null;
   engineerTaskIds: string[];
   internTaskIds: string[];
+  manualMeetingUsedThisRound: boolean;  // tracks if manual emergency meeting was triggered
 }
 
 // ── Payloads: Client → Server ─────────────────────────────────────────────────
@@ -86,6 +87,7 @@ export interface RoleAssignedPayload {
 export interface MeetingStartedPayload {
   players: Player[];
   triggeredBy: string;
+  manualMeetingUsedThisRound: boolean;  // inform all clients that manual meeting is now spent
 }
 
 export interface EjectionVoteUpdatePayload {
