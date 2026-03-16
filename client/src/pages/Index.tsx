@@ -29,6 +29,8 @@ const Index = () => {
   const [emergencyTrigger, setEmergencyTrigger] = useState<'button' | 'timer'>('button');
   const [roundTasks, setRoundTasks]             = useState<Task[]>([]);
   const [tasksCompleted, setTasksCompleted]     = useState(0);
+  // Track screen history for back button
+  const screenHistoryRef = useRef<Screen[]>(['boot']);
   // Track whether this is the very first round start vs a next-round transition
   const gameStartedRef = useRef(false);
   // Snapshot the vote result so the summary screen stays mounted until
@@ -36,6 +38,28 @@ const Index = () => {
   const [summaryVoteResult, setSummaryVoteResult] = useState<import('@/hooks/useRoom').UseRoomReturn['voteResult']>(null);
 
   const room = useRoom();
+
+  // ── Screen navigation with history tracking ────────────────────────────────
+  const navigateTo = useCallback((newScreen: Screen) => {
+    setScreen((prev) => {
+      // Only add to history if it's different from current
+      if (prev !== newScreen) {
+        screenHistoryRef.current = [...screenHistoryRef.current, newScreen];
+      }
+      return newScreen;
+    });
+  }, []);
+
+  const goBack = useCallback(() => {
+    if (screenHistoryRef.current.length > 1) {
+      screenHistoryRef.current.pop(); // remove current
+      const previousScreen = screenHistoryRef.current[screenHistoryRef.current.length - 1];
+      setScreen(previousScreen);
+    } else {
+      // If no history, go to boot
+      setScreen('boot');
+    }
+  }, []);
 
   // Snapshot voteResult into local state so summary screen stays alive even
   // after next_round_started clears room.voteResult
@@ -47,9 +71,9 @@ const Index = () => {
   useEffect(() => {
     if (room.gamePhase === 'category_vote' && !gameStartedRef.current) {
       gameStartedRef.current = true;
-      setScreen('category');
+      navigateTo('category');
     }
-  }, [room.gamePhase]);
+  }, [room.gamePhase, navigateTo]);
 
   // role_reveal → go to role screen (both first round via category vote AND next rounds via next_round_started)
   useEffect(() => {
@@ -58,36 +82,36 @@ const Index = () => {
         setRoundTasks(getTasksByIds(room.myTaskIds));
       }
       // Delay so any winner banner can display before transitioning
-      const t = setTimeout(() => setScreen('role'), 1500);
+      const t = setTimeout(() => navigateTo('role'), 1500);
       return () => clearTimeout(t);
     }
-  }, [room.gamePhase, room.selectedCategory, room.myRole, room.round]);
+  }, [room.gamePhase, room.selectedCategory, room.myRole, room.round, navigateTo]);
 
   // meeting_started → emergency interstitial first
   useEffect(() => {
     if (room.gamePhase === 'meeting') {
-      setScreen('emergency');
+      navigateTo('emergency');
     }
-  }, [room.gamePhase]);
+  }, [room.gamePhase, navigateTo]);
 
   // game_over → final screen
   useEffect(() => {
     if (room.gameOver) {
-      setScreen('final');
+      navigateTo('final');
     }
-  }, [room.gameOver]);
+  }, [room.gameOver, navigateTo]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleBootSelect = useCallback((mode: 'create' | 'join') => {
-    setScreen(mode === 'create' ? 'create' : 'join');
-  }, []);
+    navigateTo(mode === 'create' ? 'create' : 'join');
+  }, [navigateTo]);
 
   const handleCreateJoinSubmit = useCallback((name: string, code: string) => {
     setPlayerName(name);
     setRoomCode(code || room.roomId);
-    setScreen('lobby');
-  }, [room.roomId]);
+    navigateTo('lobby');
+  }, [room.roomId, navigateTo]);
 
   // Host clicks START — emits start_game to server
   // Screen transition is handled by the useEffect above (gamePhase → 'category_vote')
@@ -98,8 +122,8 @@ const Index = () => {
 
   // Role reveal finished → go to game screen
   const handleRoleComplete = useCallback(() => {
-    setScreen('game');
-  }, []);
+    navigateTo('game');
+  }, [navigateTo]);
 
   // Player clicks Emergency Meeting button in game
   const handleEmergency = useCallback(() => {
@@ -115,8 +139,8 @@ const Index = () => {
   }, [room]);
 
   const handleEmergencyComplete = useCallback(() => {
-    setScreen('meeting');
-  }, []);
+    navigateTo('meeting');
+  }, [navigateTo]);
 
   const handleTasksCompleted = useCallback((count: number) => {
     setTasksCompleted(count);
@@ -130,11 +154,11 @@ const Index = () => {
   // Meeting screen done (after vote_result reveal delay)
   const handleMeetingComplete = useCallback(() => {
     if (room.gameOver) {
-      setScreen('final');
+      navigateTo('final');
     } else {
-      setScreen('summary');
+      navigateTo('summary');
     }
-  }, [room.gameOver]);
+  }, [room.gameOver, navigateTo]);
 
   // Summary countdown done — server will fire role_assigned shortly after,
   // which flips gamePhase → role_reveal and our useEffect navigates to 'role'.
@@ -147,6 +171,7 @@ const Index = () => {
   const handlePlayAgain = useCallback(() => {
     room.disconnect();
     gameStartedRef.current = false;
+    screenHistoryRef.current = ['boot'];
     setScreen('boot');
     setPlayerName('');
     setRoomCode('');
@@ -157,6 +182,7 @@ const Index = () => {
   const handleExit = useCallback(() => {
     room.disconnect();
     gameStartedRef.current = false;
+    screenHistoryRef.current = ['boot'];
     setScreen('boot');
     setPlayerName('');
     setRoomCode('');
@@ -182,7 +208,7 @@ const Index = () => {
             <CreateJoinScreen
               mode={screen}
               onSubmit={handleCreateJoinSubmit}
-              onBack={() => setScreen('boot')}
+              onBack={goBack}
               onCreateRoom={(username, maxPlayers) => room.createRoom(username, maxPlayers)}
               onJoinRoom={room.joinRoom}
               socketStatus={room.status}
