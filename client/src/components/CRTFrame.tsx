@@ -131,27 +131,8 @@ const CRTFrame: React.FC<CRTFrameProps> = ({ children }) => {
           {/* Concave shadow — deepens corners like a curved tube face */}
           <div className="crt-concave" />
 
-          {/* Vignette */}
-          <div className="crt-vignette" />
-
           {/* Phosphor bloom */}
           <div className="crt-grain" />
-
-          {/* RGB chromatic fringe — stronger at horizontal edges */}
-          <div
-            style={{
-              pointerEvents: 'none',
-              position: 'absolute',
-              inset: 0,
-              borderRadius: '12px',
-              boxShadow:
-                'inset 3px 0 8px  rgba(255,0,80,0.09), ' +
-                'inset -3px 0 8px rgba(0,255,255,0.09), ' +
-                'inset 0 3px 6px  rgba(255,0,80,0.04), ' +
-                'inset 0 -3px 6px rgba(0,255,255,0.04)',
-              zIndex: 13,
-            }}
-          />
 
           {/* Convex glass sheen — bright top-left highlight + subtle bottom rim */}
           <div
@@ -164,19 +145,6 @@ const CRTFrame: React.FC<CRTFrameProps> = ({ children }) => {
                 'radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.045) 0%, transparent 50%), ' +
                 'linear-gradient(180deg, rgba(255,255,255,0.018) 0%, transparent 25%, transparent 75%, rgba(0,0,0,0.12) 100%)',
               zIndex: 14,
-            }}
-          />
-
-          {/* Edge-darkening mask — simulates the curved glass pulling shadows inward */}
-          <div
-            style={{
-              pointerEvents: 'none',
-              position: 'absolute',
-              inset: 0,
-              borderRadius: '12px',
-              background:
-                'radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0,0,0,0.38) 75%, rgba(0,0,0,0.72) 100%)',
-              zIndex: 12,
             }}
           />
         </div>
