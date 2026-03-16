@@ -40,24 +40,29 @@ export const styleForScreen = (screen: string): TransitionStyle => {
   }
 };
 
-// Durations must match CSS animation lengths
+// Durations must match CSS animation lengths exactly
 const EXIT_MS:    Record<TransitionStyle, number> = {
-  scan: 220, glitch: 180, dissolve: 280, flicker: 260,
-  static: 350, poweron: 200, channel: 160, collapse: 300,
+  scan: 480, glitch: 380, dissolve: 560, flicker: 500,
+  static: 600, poweron: 320, channel: 280, collapse: 300,
 };
 const ENTER_MS:   Record<TransitionStyle, number> = {
-  scan: 260, glitch: 200, dissolve: 320, flicker: 300,
-  static: 500, poweron: 650, channel: 320, collapse: 400,
+  scan: 560, glitch: 460, dissolve: 660, flicker: 600,
+  static: 820, poweron: 820, channel: 500, collapse: 400,
+};
+// Black gap between exit finishing and enter starting (ms) — cinematic beat
+const GAP_MS: Record<TransitionStyle, number> = {
+  scan: 60, glitch: 20, dissolve: 80, flicker: 100,
+  static: 80, poweron: 60, channel: 40, collapse: 60,
 };
 // How long the noise overlay stays visible (covers both exit + enter)
 const OVERLAY_MS: Record<TransitionStyle, number> = {
   scan: 0, glitch: 0, dissolve: 0, flicker: 0,
-  static: 850, poweron: 0, channel: 480, collapse: 0,
+  static: 1420, poweron: 0, channel: 820, collapse: 0,
 };
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-type Phase = 'idle' | 'exit' | 'enter';
+type Phase = 'idle' | 'exit' | 'black' | 'enter';
 
 const CRTTransition: React.FC<CRTTransitionProps> = ({
   transitionKey,
@@ -97,24 +102,29 @@ const CRTTransition: React.FC<CRTTransitionProps> = ({
     setFrozenChildren(children);
     setPhase('exit');
 
+    // After exit: hold a pure-black frame (GAP_MS), then enter
     setTimeout(() => {
       setFrozenChildren(null);
-      setPhase('enter');
+      setPhase('black');
       setTimeout(() => {
-        setPhase('idle');
-        isAnimating.current = false;
-      }, ENTER_MS[ts]);
+        setPhase('enter');
+        setTimeout(() => {
+          setPhase('idle');
+          isAnimating.current = false;
+        }, ENTER_MS[ts]);
+      }, GAP_MS[ts]);
     }, EXIT_MS[ts]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transitionKey]);
 
-  const cls = phase === 'idle' ? '' : `crt-tx-${activeStyle}-${phase}`;
+  const cls = (phase === 'idle' || phase === 'black') ? '' : `crt-tx-${activeStyle}-${phase}`;
 
   return (
     <div className={`crt-tx-wrapper ${cls}`} style={{ height: '100%', width: '100%' }}>
-      {/* Static TV noise overlay — only visible during 'static' transitions */}
+      {/* Static TV noise overlay — only visible during 'static'/'channel' transitions */}
       <div className={`crt-tx-static-overlay ${showOverlay ? 'active' : ''}`} />
-      {phase === 'exit' && frozenChildren ? frozenChildren : children}
+      {/* During 'black' gap render nothing — screen is pure dark phosphor */}
+      {phase !== 'black' && (phase === 'exit' && frozenChildren ? frozenChildren : children)}
     </div>
   );
 };

@@ -107,21 +107,26 @@
   inset: 0;
   border-radius: 12px;
   /*
-   * Layered inset shadows produce a strong barrel-curve depth:
-   *  - Tight inner ring: very dark immediate edge
-   *  - Mid ring: broad gradient darkness
-   *  - Wide outer bloom: corner-pull vignette
-   * Combined they make the centre appear to float forward like a convex lens.
+   * Bolder barrel-curve depth — seven layers:
+   *  1. Hairline hard rim      — glass-to-bezel contact line
+   *  2. Sharp inner ring       — immediate pop of darkness right at edge
+   *  3. Mid tight shadow       — strong concave falloff
+   *  4. Mid-wide gradient      — broad curvature curve
+   *  5. Outer bloom            — corner-pull vignette
+   *  6. Full-frame wash        — global hotspot focus
+   *  7-10. Directional sides   — heavier l/r/t/b tube-curve shading
    */
   box-shadow:
-    inset  0    0    6px  4px  rgba(0, 0, 0, 0.70),
-    inset  0    0   30px  12px rgba(0, 0, 0, 0.50),
-    inset  0    0   80px  20px rgba(0, 0, 0, 0.35),
-    inset  0    0  140px  30px rgba(0, 0, 0, 0.20),
-    inset  30px 0   60px  0px  rgba(0, 0, 0, 0.25),
-    inset -30px 0   60px  0px  rgba(0, 0, 0, 0.25),
-    inset  0    30px 60px 0px  rgba(0, 0, 0, 0.20),
-    inset  0   -30px 60px 0px  rgba(0, 0, 0, 0.20);
+    inset  0    0    2px  2px  rgba(0, 0, 0, 1.00),
+    inset  0    0   10px  6px  rgba(0, 0, 0, 0.96),
+    inset  0    0   35px 14px  rgba(0, 0, 0, 0.88),
+    inset  0    0   80px 24px  rgba(0, 0, 0, 0.72),
+    inset  0    0  150px 40px  rgba(0, 0, 0, 0.54),
+    inset  0    0  240px 70px  rgba(0, 0, 0, 0.34),
+    inset  55px 0  100px 0px   rgba(0, 0, 0, 0.65),
+    inset -55px 0  100px 0px   rgba(0, 0, 0, 0.65),
+    inset  0    55px 100px 0px rgba(0, 0, 0, 0.55),
+    inset  0   -55px 100px 0px rgba(0, 0, 0, 0.55);
   z-index: 11;
 }
 
@@ -446,28 +451,34 @@
   overflow: hidden;
 }
 
-/* ── SCAN WIPE (default) ──
+/* ── SCAN WIPE (lobby) ──
    A bright phosphor-green scanline sweeps down to wipe out,
    then sweeps in to reveal the next screen.                 */
 
 .crt-tx-scan-exit {
-  animation: scan-exit 220ms ease-in forwards;
+  animation: scan-exit 480ms cubic-bezier(0.55, 0, 0.85, 0.05) forwards;
 }
 .crt-tx-scan-enter {
-  animation: scan-enter 260ms ease-out forwards;
+  animation: scan-enter 560ms cubic-bezier(0.15, 0.95, 0.35, 1) forwards;
 }
 
 @keyframes scan-exit {
   0%   { clip-path: inset(0 0 0 0);       opacity: 1;   filter: brightness(1); }
-  60%  { clip-path: inset(0 0 40% 0);     opacity: 1;   filter: brightness(1.3); }
-  85%  { clip-path: inset(0 0 95% 0);     opacity: 1;   filter: brightness(2); }
-  100% { clip-path: inset(0 0 100% 0);    opacity: 0;   filter: brightness(3); }
+  20%  { clip-path: inset(0 0 8% 0);      opacity: 1;   filter: brightness(1.2); }
+  45%  { clip-path: inset(0 0 28% 0);     opacity: 1;   filter: brightness(1.7); }
+  65%  { clip-path: inset(0 0 58% 0);     opacity: 1;   filter: brightness(2.6); }
+  82%  { clip-path: inset(0 0 88% 0);     opacity: 1;   filter: brightness(3.5); }
+  94%  { clip-path: inset(0 0 98% 0);     opacity: 0.5; filter: brightness(4.5); }
+  100% { clip-path: inset(0 0 100% 0);    opacity: 0;   filter: brightness(5); }
 }
 
 @keyframes scan-enter {
-  0%   { clip-path: inset(100% 0 0 0);    opacity: 0;   filter: brightness(3); }
-  15%  { clip-path: inset(95% 0 0 0);     opacity: 1;   filter: brightness(2); }
-  55%  { clip-path: inset(30% 0 0 0);     opacity: 1;   filter: brightness(1.2); }
+  0%   { clip-path: inset(100% 0 0 0);    opacity: 0;   filter: brightness(5); }
+  8%   { clip-path: inset(97% 0 0 0);     opacity: 1;   filter: brightness(4); }
+  28%  { clip-path: inset(76% 0 0 0);     opacity: 1;   filter: brightness(2.8); }
+  50%  { clip-path: inset(48% 0 0 0);     opacity: 1;   filter: brightness(2.0); }
+  70%  { clip-path: inset(22% 0 0 0);     opacity: 1;   filter: brightness(1.4); }
+  88%  { clip-path: inset(4% 0 0 0);      opacity: 1;   filter: brightness(1.1); }
   100% { clip-path: inset(0 0 0 0);       opacity: 1;   filter: brightness(1); }
 }
 
@@ -475,79 +486,98 @@
    Instant hard cut with a horizontal RGB-tear burst.       */
 
 .crt-tx-glitch-exit {
-  animation: glitch-exit 180ms steps(1) forwards;
+  animation: glitch-exit 380ms cubic-bezier(0.55, 0, 0.9, 0.1) forwards;
 }
 .crt-tx-glitch-enter {
-  animation: glitch-enter 200ms steps(1) forwards;
+  animation: glitch-enter 460ms cubic-bezier(0.1, 0.9, 0.3, 1) forwards;
 }
 
 @keyframes glitch-exit {
-  0%   { opacity: 1; transform: translate(0);       filter: none; }
-  20%  { opacity: 1; transform: translate(-4px, 0); filter: hue-rotate(90deg) brightness(1.5); }
-  40%  { opacity: 0; transform: translate( 4px, 2px); filter: hue-rotate(-90deg) brightness(2); }
-  60%  { opacity: 0; transform: translate(-6px,-2px); filter: saturate(8); }
-  80%  { opacity: 0; transform: translate(0);       filter: none; }
-  100% { opacity: 0; transform: translate(0);       filter: none; }
+  0%   { opacity: 1;   transform: translate(0, 0)       skewX(0deg);   filter: none; }
+  10%  { opacity: 1;   transform: translate(-4px, 0)    skewX(-1.5deg); filter: hue-rotate(80deg) brightness(1.6) saturate(3); }
+  22%  { opacity: 0.9; transform: translate(6px, 1px)   skewX(2deg);   filter: hue-rotate(-70deg) brightness(2.2) saturate(4); }
+  34%  { opacity: 0.7; transform: translate(-7px,-2px)  skewX(-3deg);  filter: saturate(8) brightness(2.8); }
+  48%  { opacity: 0.4; transform: translate(4px, 2px)   skewX(1deg);   filter: hue-rotate(180deg) brightness(1.5); }
+  62%  { opacity: 0.15; transform: translate(-3px, 0)   skewX(-0.5deg); filter: brightness(0.6); }
+  78%  { opacity: 0.05; transform: translate(2px,-1px)  skewX(0deg);   filter: brightness(0.3); }
+  100% { opacity: 0;   transform: translate(0, 0)       skewX(0deg);   filter: none; }
 }
 
 @keyframes glitch-enter {
-  0%   { opacity: 0; transform: translate( 6px, 0); filter: hue-rotate(90deg) brightness(2); }
-  25%  { opacity: 1; transform: translate(-4px, 0); filter: hue-rotate(-90deg) brightness(1.5); }
-  50%  { opacity: 1; transform: translate( 2px,-1px); filter: saturate(4) brightness(1.2); }
-  75%  { opacity: 1; transform: translate(-1px, 1px); filter: brightness(1.1); }
-  100% { opacity: 1; transform: translate(0);       filter: none; }
+  0%   { opacity: 0;   transform: translate( 9px, 0)    skewX(3deg);   filter: hue-rotate(90deg) brightness(3.5); }
+  12%  { opacity: 0.7; transform: translate(-6px, 0)    skewX(-2.5deg); filter: hue-rotate(-80deg) brightness(2.5) saturate(5); }
+  26%  { opacity: 0.9; transform: translate( 4px,-2px)  skewX(1.5deg); filter: saturate(4) brightness(1.8); }
+  40%  { opacity: 1;   transform: translate(-3px, 1px)  skewX(-1deg);  filter: brightness(1.5) saturate(2.5); }
+  56%  { opacity: 1;   transform: translate( 2px,-1px)  skewX(0.5deg); filter: brightness(1.2) saturate(1.5); }
+  70%  { opacity: 1;   transform: translate(-1px, 0)    skewX(-0.3deg); filter: brightness(1.1); }
+  84%  { opacity: 1;   transform: translate( 0.5px, 0)  skewX(0.1deg); filter: brightness(1.05); }
+  100% { opacity: 1;   transform: translate(0, 0)       skewX(0deg);   filter: none; }
 }
 
 /* ── DISSOLVE (role reveal) ──
    Phosphor fade-through: brightness blooms then dims in.   */
 
 .crt-tx-dissolve-exit {
-  animation: dissolve-exit 280ms ease-in forwards;
+  animation: dissolve-exit 560ms cubic-bezier(0.4, 0, 0.8, 0.2) forwards;
 }
 .crt-tx-dissolve-enter {
-  animation: dissolve-enter 320ms ease-out forwards;
+  animation: dissolve-enter 660ms cubic-bezier(0.1, 0.8, 0.25, 1) forwards;
 }
 
 @keyframes dissolve-exit {
-  0%   { opacity: 1; filter: brightness(1)   blur(0px); }
-  50%  { opacity: 1; filter: brightness(2.5) blur(2px); }
-  100% { opacity: 0; filter: brightness(4)   blur(6px); }
+  0%   { opacity: 1;   filter: brightness(1)   blur(0px)   saturate(1)   scale(1); }
+  18%  { opacity: 1;   filter: brightness(1.4) blur(0.5px) saturate(1.3) scale(1.002); }
+  38%  { opacity: 0.9; filter: brightness(2.2) blur(2px)   saturate(1.6) scale(1.005); }
+  58%  { opacity: 0.6; filter: brightness(3.5) blur(5px)   saturate(0.7) scale(1.008); }
+  78%  { opacity: 0.2; filter: brightness(5)   blur(8px)   saturate(0.2) scale(1.012); }
+  100% { opacity: 0;   filter: brightness(7)   blur(14px)  saturate(0)   scale(1.016); }
 }
 
 @keyframes dissolve-enter {
-  0%   { opacity: 0; filter: brightness(4)   blur(6px); }
-  40%  { opacity: 1; filter: brightness(2)   blur(2px); }
-  100% { opacity: 1; filter: brightness(1)   blur(0px); }
+  0%   { opacity: 0;   filter: brightness(7)   blur(14px)  saturate(0)   scale(1.016); }
+  18%  { opacity: 0.4; filter: brightness(5)   blur(9px)   saturate(0.1) scale(1.012); }
+  36%  { opacity: 0.7; filter: brightness(3.2) blur(5px)   saturate(0.4) scale(1.008); }
+  54%  { opacity: 0.9; filter: brightness(2.0) blur(2.5px) saturate(0.7) scale(1.004); }
+  70%  { opacity: 1;   filter: brightness(1.5) blur(1px)   saturate(0.9) scale(1.001); }
+  84%  { opacity: 1;   filter: brightness(1.15) blur(0.3px) saturate(1)  scale(1); }
+  100% { opacity: 1;   filter: brightness(1)   blur(0px)   saturate(1)   scale(1); }
 }
 
 /* ── FLICKER (final / summary) ──
    Tube-power instability: brightness stutters before settling. */
 
 .crt-tx-flicker-exit {
-  animation: flicker-exit 260ms steps(1) forwards;
+  animation: flicker-exit 500ms cubic-bezier(0.4, 0, 1, 0.6) forwards;
 }
 .crt-tx-flicker-enter {
-  animation: flicker-enter 300ms steps(1) forwards;
+  animation: flicker-enter 600ms cubic-bezier(0, 0.4, 0.6, 1) forwards;
 }
 
 @keyframes flicker-exit {
-  0%   { opacity: 1;   filter: brightness(1); }
-  20%  { opacity: 0.4; filter: brightness(0.3); }
-  35%  { opacity: 1;   filter: brightness(1.8); }
-  50%  { opacity: 0.2; filter: brightness(0.1); }
-  70%  { opacity: 1;   filter: brightness(1.5); }
-  85%  { opacity: 0;   filter: brightness(0); }
-  100% { opacity: 0;   filter: brightness(0); }
+  0%   { opacity: 1;    filter: brightness(1)    contrast(1); }
+  10%  { opacity: 0.7;  filter: brightness(0.5)  contrast(1.2); }
+  20%  { opacity: 1;    filter: brightness(1.8)  contrast(0.9); }
+  32%  { opacity: 0.3;  filter: brightness(0.2)  contrast(1.5); }
+  44%  { opacity: 0.85; filter: brightness(1.4)  contrast(1.0); }
+  54%  { opacity: 0.1;  filter: brightness(0.05) contrast(2); }
+  64%  { opacity: 0.6;  filter: brightness(1.0)  contrast(1.1); }
+  74%  { opacity: 0.05; filter: brightness(0.02) contrast(1); }
+  86%  { opacity: 0.3;  filter: brightness(0.6)  contrast(1); }
+  100% { opacity: 0;    filter: brightness(0)    contrast(1); }
 }
 
 @keyframes flicker-enter {
-  0%   { opacity: 0;   filter: brightness(0); }
-  20%  { opacity: 0.5; filter: brightness(2); }
-  40%  { opacity: 0.2; filter: brightness(0.4); }
-  55%  { opacity: 1;   filter: brightness(1.8); }
-  70%  { opacity: 0.8; filter: brightness(1.2); }
-  85%  { opacity: 1;   filter: brightness(1.1); }
-  100% { opacity: 1;   filter: brightness(1); }
+  0%   { opacity: 0;    filter: brightness(0)    contrast(1); }
+  10%  { opacity: 0.3;  filter: brightness(3)    contrast(0.8); }
+  20%  { opacity: 0.05; filter: brightness(0.1)  contrast(1.5); }
+  30%  { opacity: 0.8;  filter: brightness(2.2)  contrast(0.9); }
+  42%  { opacity: 0.4;  filter: brightness(0.8)  contrast(1.2); }
+  52%  { opacity: 1;    filter: brightness(1.7)  contrast(1.0); }
+  62%  { opacity: 0.8;  filter: brightness(1.2)  contrast(1.1); }
+  72%  { opacity: 1;    filter: brightness(1.4)  contrast(1.0); }
+  82%  { opacity: 0.95; filter: brightness(1.1)  contrast(1.0); }
+  92%  { opacity: 1;    filter: brightness(1.04) contrast(1.0); }
+  100% { opacity: 1;    filter: brightness(1)    contrast(1); }
 }
 
 /* ── STATIC TV (game start → category vote) ──
@@ -555,36 +585,39 @@
    then snapping to a new channel.                          */
 
 .crt-tx-static-exit {
-  animation: static-exit 350ms steps(1) forwards;
+  animation: static-exit 600ms cubic-bezier(0.4, 0, 0.8, 0.2) forwards;
 }
 .crt-tx-static-enter {
-  animation: static-enter 500ms steps(1) forwards;
+  animation: static-enter 820ms cubic-bezier(0.1, 0.85, 0.3, 1) forwards;
 }
 
 /* Exit: screen collapses into noise then goes black */
 @keyframes static-exit {
-  0%   { opacity: 1; filter: brightness(1)   contrast(1)   saturate(1); transform: scaleY(1); }
-  12%  { opacity: 1; filter: brightness(3)   contrast(0.2) saturate(0); transform: scaleY(1); }
-  25%  { opacity: 1; filter: brightness(1.5) contrast(8)   saturate(0) hue-rotate(180deg); transform: scaleY(1.02); }
-  40%  { opacity: 1; filter: brightness(8)   contrast(0.1) saturate(0); transform: scaleY(0.98); }
-  55%  { opacity: 1; filter: brightness(0.3) contrast(12)  saturate(0); transform: scaleY(1.01) translateY(-2px); }
-  70%  { opacity: 1; filter: brightness(5)   contrast(0.1) saturate(0); transform: scaleY(1); }
-  85%  { opacity: 1; filter: brightness(0.1) contrast(1)   saturate(0); transform: scaleY(0.02) scaleX(0.8); }
-  100% { opacity: 0; filter: brightness(0);                              transform: scaleY(0.01) scaleX(0.6); }
+  0%   { opacity: 1;   filter: brightness(1)   contrast(1)    saturate(1);  transform: scaleY(1)    scaleX(1); }
+  8%   { opacity: 1;   filter: brightness(2.5) contrast(0.3)  saturate(0.2); transform: scaleY(1)    scaleX(1); }
+  18%  { opacity: 1;   filter: brightness(1.2) contrast(8)    saturate(0)   hue-rotate(140deg); transform: scaleY(1.015); }
+  28%  { opacity: 1;   filter: brightness(7)   contrast(0.15) saturate(0);  transform: scaleY(0.99) scaleX(1); }
+  40%  { opacity: 1;   filter: brightness(0.5) contrast(12)   saturate(0);  transform: scaleY(1.01) scaleX(1); }
+  52%  { opacity: 1;   filter: brightness(5)   contrast(0.2)  saturate(0);  transform: scaleY(1)    scaleX(1); }
+  64%  { opacity: 0.8; filter: brightness(0.2) contrast(1)    saturate(0);  transform: scaleY(0.12) scaleX(0.9); }
+  76%  { opacity: 0.4; filter: brightness(0.8) contrast(0.5)  saturate(0);  transform: scaleY(0.03) scaleX(0.75); }
+  100% { opacity: 0;   filter: brightness(0);                               transform: scaleY(0.01) scaleX(0.5); }
 }
 
 /* Enter: screen snaps on from a horizontal line, static clears */
 @keyframes static-enter {
-  0%   { opacity: 0; filter: brightness(0);                               transform: scaleY(0.01) scaleX(0.5); }
-  8%   { opacity: 1; filter: brightness(20) contrast(0.1) saturate(0);   transform: scaleY(0.015) scaleX(1); }
-  18%  { opacity: 1; filter: brightness(6)  contrast(0.2) saturate(0);   transform: scaleY(0.04)  scaleX(1); }
-  30%  { opacity: 1; filter: brightness(4)  contrast(0.5) saturate(0);   transform: scaleY(0.15)  scaleX(1); }
-  42%  { opacity: 1; filter: brightness(3)  contrast(2)   saturate(0);   transform: scaleY(0.5)   scaleX(1); }
-  55%  { opacity: 1; filter: brightness(2)  contrast(4)   saturate(0);   transform: scaleY(0.85)  scaleX(1); }
-  65%  { opacity: 1; filter: brightness(1.8) contrast(6)  saturate(0);   transform: scaleY(1)     scaleX(1); }
-  75%  { opacity: 1; filter: brightness(1.5) contrast(3)  saturate(0.3); transform: scaleY(1)     scaleX(1); }
-  85%  { opacity: 1; filter: brightness(1.2) contrast(1.5) saturate(0.7); transform: scaleY(1)    scaleX(1); }
-  100% { opacity: 1; filter: brightness(1)  contrast(1)   saturate(1);   transform: scaleY(1)     scaleX(1); }
+  0%   { opacity: 0;   filter: brightness(0);                                transform: scaleY(0.01) scaleX(0.4); }
+  5%   { opacity: 1;   filter: brightness(25)  contrast(0.05) saturate(0);  transform: scaleY(0.012) scaleX(1); }
+  12%  { opacity: 1;   filter: brightness(10)  contrast(0.15) saturate(0);  transform: scaleY(0.03)  scaleX(1); }
+  22%  { opacity: 1;   filter: brightness(6)   contrast(0.4)  saturate(0);  transform: scaleY(0.12)  scaleX(1); }
+  34%  { opacity: 1;   filter: brightness(4)   contrast(1.2)  saturate(0);  transform: scaleY(0.38)  scaleX(1); }
+  46%  { opacity: 1;   filter: brightness(2.8) contrast(2.5)  saturate(0.1); transform: scaleY(0.68) scaleX(1); }
+  57%  { opacity: 1;   filter: brightness(2.2) contrast(4)    saturate(0.2); transform: scaleY(0.88) scaleX(1); }
+  67%  { opacity: 1;   filter: brightness(1.8) contrast(5)    saturate(0.4); transform: scaleY(1)    scaleX(1); }
+  76%  { opacity: 1;   filter: brightness(1.5) contrast(2.5)  saturate(0.6); transform: scaleY(1)    scaleX(1); }
+  85%  { opacity: 1;   filter: brightness(1.25) contrast(1.5) saturate(0.8); transform: scaleY(1)    scaleX(1); }
+  93%  { opacity: 1;   filter: brightness(1.08) contrast(1.1) saturate(0.95); transform: scaleY(1)   scaleX(1); }
+  100% { opacity: 1;   filter: brightness(1)   contrast(1)    saturate(1);   transform: scaleY(1)    scaleX(1); }
 }
 
 /* ASCII box */
@@ -610,27 +643,31 @@
    line that expands into the new content.                          */
 
 .crt-tx-poweron-exit {
-  animation: poweron-exit 200ms ease-in forwards;
+  animation: poweron-exit 320ms cubic-bezier(0.5, 0, 0.9, 0.2) forwards;
 }
 .crt-tx-poweron-enter {
-  animation: poweron-enter 650ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: poweron-enter 820ms cubic-bezier(0.12, 0.95, 0.28, 1) forwards;
 }
 
 @keyframes poweron-exit {
-  0%   { opacity: 1; transform: scaleY(1)    scaleX(1);   filter: brightness(1); }
-  50%  { opacity: 1; transform: scaleY(0.04) scaleX(0.9); filter: brightness(3); }
-  100% { opacity: 0; transform: scaleY(0.01) scaleX(0.5); filter: brightness(0); }
+  0%   { opacity: 1; transform: scaleY(1)     scaleX(1);    filter: brightness(1); }
+  30%  { opacity: 1; transform: scaleY(0.12)  scaleX(0.95); filter: brightness(2.5); }
+  60%  { opacity: 1; transform: scaleY(0.025) scaleX(0.85); filter: brightness(5); }
+  80%  { opacity: 0.6; transform: scaleY(0.012) scaleX(0.65); filter: brightness(8); }
+  100% { opacity: 0; transform: scaleY(0.008) scaleX(0.4);  filter: brightness(0); }
 }
 
 @keyframes poweron-enter {
-  0%   { opacity: 0; transform: scaleY(0.01) scaleX(0.4); filter: brightness(0); }
-  12%  { opacity: 1; transform: scaleY(0.015) scaleX(1);  filter: brightness(18) blur(2px); }
-  28%  { opacity: 1; transform: scaleY(0.04) scaleX(1);   filter: brightness(8)  blur(1px); }
-  45%  { opacity: 1; transform: scaleY(0.25) scaleX(1);   filter: brightness(4)  blur(0.5px); }
-  62%  { opacity: 1; transform: scaleY(0.7)  scaleX(1);   filter: brightness(2); }
-  78%  { opacity: 1; transform: scaleY(1)    scaleX(1);   filter: brightness(1.4); }
-  90%  { opacity: 1; transform: scaleY(1)    scaleX(1);   filter: brightness(1.1); }
-  100% { opacity: 1; transform: scaleY(1)    scaleX(1);   filter: brightness(1); }
+  0%   { opacity: 0; transform: scaleY(0.008) scaleX(0.35); filter: brightness(0); }
+  8%   { opacity: 1; transform: scaleY(0.012) scaleX(1);    filter: brightness(22) blur(3px); }
+  18%  { opacity: 1; transform: scaleY(0.025) scaleX(1);    filter: brightness(12) blur(2px); }
+  30%  { opacity: 1; transform: scaleY(0.08)  scaleX(1);    filter: brightness(7)  blur(1.5px); }
+  44%  { opacity: 1; transform: scaleY(0.28)  scaleX(1);    filter: brightness(4)  blur(0.8px); }
+  58%  { opacity: 1; transform: scaleY(0.62)  scaleX(1);    filter: brightness(2.2) blur(0.4px); }
+  70%  { opacity: 1; transform: scaleY(0.88)  scaleX(1);    filter: brightness(1.6); }
+  80%  { opacity: 1; transform: scaleY(1)     scaleX(1);    filter: brightness(1.3); }
+  90%  { opacity: 1; transform: scaleY(1)     scaleX(1);    filter: brightness(1.08); }
+  100% { opacity: 1; transform: scaleY(1)     scaleX(1);    filter: brightness(1); }
 }
 
 /* ── CHANNEL CHANGE (lobby → game, game screen entry) ──
@@ -638,29 +675,33 @@
    the channel button on an old TV.                              */
 
 .crt-tx-channel-exit {
-  animation: channel-exit 160ms steps(1) forwards;
+  animation: channel-exit 280ms cubic-bezier(0.5, 0, 0.85, 0.1) forwards;
 }
 .crt-tx-channel-enter {
-  animation: channel-enter 320ms steps(1) forwards;
+  animation: channel-enter 500ms cubic-bezier(0.1, 0.9, 0.3, 1) forwards;
 }
 
 @keyframes channel-exit {
-  0%   { opacity: 1; filter: brightness(1)  contrast(1);  transform: translateY(0)   scaleY(1); }
-  20%  { opacity: 1; filter: brightness(6)  contrast(0.1) saturate(0); transform: translateY(0) scaleY(1); }
-  45%  { opacity: 1; filter: brightness(12) contrast(0.05) saturate(0); transform: translateY(2px) scaleY(0.96); }
-  70%  { opacity: 0; filter: brightness(2)  contrast(0.2) saturate(0); transform: translateY(-4px) scaleY(0.04); }
-  100% { opacity: 0; filter: brightness(0);                             transform: translateY(0) scaleY(0.01); }
+  0%   { opacity: 1;    filter: brightness(1)   contrast(1)   saturate(1);  transform: translateY(0) scaleY(1); }
+  15%  { opacity: 1;    filter: brightness(4)   contrast(0.2) saturate(0.3); transform: translateY(0) scaleY(1); }
+  30%  { opacity: 1;    filter: brightness(9)   contrast(0.08) saturate(0); transform: translateY(1px) scaleY(0.98); }
+  46%  { opacity: 0.8;  filter: brightness(14)  contrast(0.04) saturate(0); transform: translateY(3px) scaleY(0.6); }
+  62%  { opacity: 0.3;  filter: brightness(4)   contrast(0.15) saturate(0); transform: translateY(-3px) scaleY(0.12); }
+  78%  { opacity: 0.08; filter: brightness(1.5) contrast(0.3)  saturate(0); transform: translateY(0) scaleY(0.025); }
+  100% { opacity: 0;    filter: brightness(0);                               transform: translateY(0) scaleY(0.008); }
 }
 
 @keyframes channel-enter {
-  0%   { opacity: 0; filter: brightness(0);               transform: translateY(0) scaleY(0.01); }
-  15%  { opacity: 1; filter: brightness(14) contrast(0.1) saturate(0); transform: scaleY(0.02) scaleX(1); }
-  30%  { opacity: 1; filter: brightness(6)  contrast(0.3) saturate(0); transform: scaleY(0.08); }
-  48%  { opacity: 1; filter: brightness(3)  contrast(1)   saturate(0); transform: scaleY(0.5); }
-  65%  { opacity: 1; filter: brightness(1.8) contrast(1.5) saturate(0.5); transform: scaleY(0.9); }
-  80%  { opacity: 1; filter: brightness(1.3) contrast(1.2) saturate(0.8); transform: scaleY(1); }
-  90%  { opacity: 1; filter: brightness(1.1) contrast(1);               transform: scaleY(1); }
-  100% { opacity: 1; filter: brightness(1)  contrast(1)   saturate(1);  transform: scaleY(1); }
+  0%   { opacity: 0;   filter: brightness(0);                                transform: translateY(0) scaleY(0.008); }
+  10%  { opacity: 1;   filter: brightness(18) contrast(0.06) saturate(0);   transform: scaleY(0.012) scaleX(1); }
+  22%  { opacity: 1;   filter: brightness(8)  contrast(0.2)  saturate(0);   transform: scaleY(0.06); }
+  36%  { opacity: 1;   filter: brightness(4)  contrast(0.8)  saturate(0);   transform: scaleY(0.32); }
+  50%  { opacity: 1;   filter: brightness(2.5) contrast(1.8) saturate(0.2); transform: scaleY(0.68); }
+  63%  { opacity: 1;   filter: brightness(1.8) contrast(2.5) saturate(0.5); transform: scaleY(0.90); }
+  74%  { opacity: 1;   filter: brightness(1.4) contrast(1.8) saturate(0.7); transform: scaleY(1); }
+  84%  { opacity: 1;   filter: brightness(1.2) contrast(1.3) saturate(0.85); transform: scaleY(1); }
+  93%  { opacity: 1;   filter: brightness(1.06) contrast(1.1) saturate(0.95); transform: scaleY(1); }
+  100% { opacity: 1;   filter: brightness(1)  contrast(1)    saturate(1);   transform: scaleY(1); }
 }
 
 /* Channel static overlay — flashes during channel-change */

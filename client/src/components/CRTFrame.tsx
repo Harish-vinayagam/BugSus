@@ -56,10 +56,10 @@ const CRTFrame: React.FC<CRTFrameProps> = ({ children }) => {
              *  4. Faint green centre glow (phosphor hotspot)
              */
             boxShadow:
-              'inset 0 0 0   2px  rgba(0,0,0,0.85), ' +
-              'inset 0 0 40px 15px rgba(0,0,0,0.60), ' +
-              'inset 0 0 100px 30px rgba(0,0,0,0.40), ' +
-              'inset 0 0 180px 40px rgba(0,0,0,0.25), ' +
+              'inset 0 0 0    2px  rgba(0,0,0,1.00), ' +
+              'inset 0 0 60px 24px rgba(0,0,0,0.90), ' +
+              'inset 0 0 140px 50px rgba(0,0,0,0.68), ' +
+              'inset 0 0 260px 80px rgba(0,0,0,0.44), ' +
               'inset 0 0 12px  4px  rgba(51,255,51,0.07), ' +
               '0 0 4px #000',
           }}
@@ -175,7 +175,7 @@ const CRTFrame: React.FC<CRTFrameProps> = ({ children }) => {
               inset: 0,
               borderRadius: '12px',
               background:
-                'radial-gradient(ellipse at 50% 50%, transparent 60%, rgba(0,0,0,0.20) 100%)',
+                'radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0,0,0,0.38) 75%, rgba(0,0,0,0.72) 100%)',
               zIndex: 12,
             }}
           />
