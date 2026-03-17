@@ -39,7 +39,7 @@ export interface CreateRoomPayload   { username: string; maxPlayers: 4 | 6 | 8 }
 export interface JoinRoomPayload     { roomId: string; username: string }
 export interface StartGamePayload    { roomId: string }
 export interface CategoryVotePayload { roomId: string; category: string }
-export interface StartMeetingPayload { roomId: string }
+export interface StartMeetingPayload { roomId: string; isTimer?: boolean }
 export interface CastVotePayload     { roomId: string; targetId: string | 'SKIP' }
 export interface TaskProgressPayload { roomId: string; count: number }
 export interface NextRoundPayload    { roomId: string }

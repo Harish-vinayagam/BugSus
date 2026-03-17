@@ -248,33 +248,37 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
   });
 
   // ── start_meeting ──────────────────────────────────────────────────────────
-  socket.on('start_meeting', ({ roomId }) => {
+  socket.on('start_meeting', ({ roomId, isTimer }) => {
     const room = getRoom(roomId);
     // Allow meeting from 'game' OR 'role_reveal' (in case player calls it right after reveal)
     if (!room || (room.phase !== 'game' && room.phase !== 'role_reveal')) return;
 
     // Check if manual emergency meeting has already been used this round
-    if (room.manualMeetingUsedThisRound) {
+    // Timer-triggered meetings bypass this check
+    if (!isTimer && room.manualMeetingUsedThisRound) {
       socket.emit('room_error', { message: 'Emergency meeting already used this round.' });
       return;
     }
 
     room.phase = 'meeting';
     room.ejectionVotes = {};
-    room.manualMeetingUsedThisRound = true;  // mark as used
+    // Only mark as used if this was a manual trigger
+    if (!isTimer) {
+      room.manualMeetingUsedThisRound = true;  // mark as used
+    }
 
     const trigger = room.players.find((p) => p.id === socket.id);
     io.to(roomId).emit('meeting_started', {
       players: room.players.filter((p) => p.alive),
       triggeredBy: trigger?.username ?? 'UNKNOWN',
-      manualMeetingUsedThisRound: true,
+      manualMeetingUsedThisRound: room.manualMeetingUsedThisRound,
     });
     // Signal clients to stop their game timer immediately
     io.to(roomId).emit('timer_sync', { phase: 'game', endsAt: Date.now() });
 
     // Start ejection vote timeout
     ejectionVoteTimers.set(roomId, setTimeout(() => finaliseEjectionVote(io, roomId), EJECTION_VOTE_TIMEOUT_MS));
-    console.log(`[meeting]     ${roomId} triggered by ${trigger?.username}`);
+    console.log(`[meeting]     ${roomId} triggered by ${trigger?.username}${isTimer ? ' (timer)' : ''}`);
   });
 
   // ── cast_vote ──────────────────────────────────────────────────────────────

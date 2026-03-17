@@ -135,7 +135,7 @@ const Index = () => {
   // Round timer expired
   const handleTimerEnd = useCallback(() => {
     setEmergencyTrigger('timer');
-    room.triggerMeeting();
+    room.triggerMeeting(true);  // pass true to indicate this is a timer-triggered meeting
   }, [room]);
 
   const handleEmergencyComplete = useCallback(() => {

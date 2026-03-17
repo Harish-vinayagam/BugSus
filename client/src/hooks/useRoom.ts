@@ -36,7 +36,7 @@ export interface UseRoomReturn {
   disconnect: () => void;
   startGame: () => void;
   castCategoryVote: (category: string) => void;
-  triggerMeeting: () => void;
+  triggerMeeting: (isTimer?: boolean) => void;
   castEjectionVote: (targetId: string | 'SKIP') => void;
   reportTaskProgress: (count: number) => void;
   broadcastCode: (code: string, taskId: string) => void;
@@ -222,8 +222,8 @@ export const useRoom = (): UseRoomReturn => {
     socket.emit('category_vote', { roomId: roomIdRef.current, category });
   }, []);
 
-  const triggerMeeting = useCallback(() => {
-    socket.emit('start_meeting', { roomId: roomIdRef.current });
+  const triggerMeeting = useCallback((isTimer: boolean = false) => {
+    socket.emit('start_meeting', { roomId: roomIdRef.current, isTimer });
   }, []);
 
   const castEjectionVote = useCallback((targetId: string | 'SKIP') => {
