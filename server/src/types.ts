@@ -29,10 +29,15 @@ export interface Room {
   categoryVotes: Record<string, string>;
   ejectionVotes: Record<string, string>;
   tasksCompleted: Record<string, number>;
+  completedTaskIds: string[];  // accumulated task IDs completed across all rounds
   winner: 'engineers' | 'intern' | null;
   engineerTaskIds: string[];
   internTaskIds: string[];
   manualMeetingUsedThisRound: boolean;  // tracks if manual emergency meeting was triggered
+  currentMeetingIsTimer: boolean;  // tracks if current meeting was triggered by timer (auto)
+  gameTimerEndsAtWhenMeetingStarted: number;  // stores game timer end time when manual meeting starts
+  gameTimerEndsAt: number; // authoritative server endsAt for the current round's game timer
+  pausedGameRemainingMs: number; // remaining ms captured when a manual meeting starts (0 = not paused)
 }
 
 // ── Payloads: Client → Server ─────────────────────────────────────────────────
@@ -101,6 +106,7 @@ export interface VoteResultPayload {
   ejectedWasIntern: boolean;
   internUsername: string;
   alivePlayers: Player[];
+  wasManualMeeting?: boolean;  // if true, return to game; if false or timer, go to summary
 }
 
 export interface TaskProgressUpdatePayload {
@@ -122,6 +128,7 @@ export interface NextRoundStartedPayload {
   category: string;
   taskIds: string[];
   gameTimerEndsAt: number;
+  completedTaskIds: string[];   // tasks already completed across all rounds so far
 }
 
 export interface CodeSyncedPayload {

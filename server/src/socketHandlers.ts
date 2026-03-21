@@ -68,6 +68,7 @@ const finaliseCategoryVote = (io: GameServer, roomId: string) => {
   // Game timer starts after the role-reveal screen clears (ROLE_REVEAL_DELAY_MS).
   // We broadcast that deadline with role_assigned so every client has the same endsAt.
   const gameTimerEndsAt = Date.now() + ROLE_REVEAL_DELAY_MS + GAME_TIMER_MS;
+  room.gameTimerEndsAt = gameTimerEndsAt;
 
   // Assign intern and send each player their private role + shared task list
   const result = assignRoles(roomId);
@@ -103,6 +104,7 @@ const finaliseEjectionVote = (io: GameServer, roomId: string) => {
     ejectedWasIntern,
     internUsername:  internPlayer?.username ?? '???',
     alivePlayers,
+    wasManualMeeting: !room.currentMeetingIsTimer,  // true if manual, false if timer
   });
 
   // Check win condition
@@ -127,6 +129,22 @@ const finaliseEjectionVote = (io: GameServer, roomId: string) => {
       });
     }, 4000);
   } else {
+    // If this was a MANUAL meeting (not timer-triggered), resume the same round
+    if (!room.currentMeetingIsTimer) {
+      room.phase = 'game';
+
+      // Resume the paused timer with the same remaining time it had when meeting started
+      if (room.pausedGameRemainingMs > 0) {
+        room.gameTimerEndsAt = Date.now() + room.pausedGameRemainingMs;
+        room.pausedGameRemainingMs = 0;
+        io.to(roomId).emit('timer_sync', { phase: 'game', endsAt: room.gameTimerEndsAt });
+      }
+
+      console.log(`[meeting]     ${roomId} resuming round ${room.round} after manual meeting`);
+      return;
+    }
+    
+    // If this was a TIMER meeting, proceed to next round
     // Continue — show summary, then start next round with the SAME category
     room.phase = 'summary';
     setTimeout(() => {
@@ -139,13 +157,12 @@ const finaliseEjectionVote = (io: GameServer, roomId: string) => {
 
       // Compute game timer (role-reveal delay + coding time)
       const gameTimerEndsAt = Date.now() + ROLE_REVEAL_DELAY_MS + GAME_TIMER_MS;
+      updatedRoom.gameTimerEndsAt = gameTimerEndsAt;
 
-      // Re-assign roles for this round and send each player their info
-      const roleResult = assignRoles(roomId);
-      if (!roleResult) return;
-      const internId = roleResult.internId;
+      // Roles stay the same — internId was assigned at game start and never changes.
+      const internId = updatedRoom.internId;
 
-      updatedRoom.players.forEach((p) => {
+      updatedRoom.players.filter((p) => p.alive).forEach((p) => {
         const role: 'engineer' | 'intern' = p.id === internId ? 'intern' : 'engineer';
         io.to(p.id).emit('role_assigned', {
           role,
@@ -165,6 +182,7 @@ const finaliseEjectionVote = (io: GameServer, roomId: string) => {
         category: updatedRoom.category,
         taskIds: updatedRoom.engineerTaskIds,
         gameTimerEndsAt,
+        completedTaskIds: updatedRoom.completedTaskIds,
       });
     }, 6000);
   }
@@ -262,9 +280,18 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
 
     room.phase = 'meeting';
     room.ejectionVotes = {};
-    // Only mark as used if this was a manual trigger
+    room.currentMeetingIsTimer = isTimer || false;
+
+    // Pause the round timer only for MANUAL meetings
     if (!isTimer) {
-      room.manualMeetingUsedThisRound = true;  // mark as used
+      room.manualMeetingUsedThisRound = true;
+      room.gameTimerEndsAtWhenMeetingStarted = room.gameTimerEndsAt;
+      room.pausedGameRemainingMs = Math.max(0, room.gameTimerEndsAt - Date.now());
+      // Stop client timers immediately (they will be resumed with a new endsAt after voting)
+      io.to(roomId).emit('timer_sync', { phase: 'game', endsAt: Date.now() });
+    } else {
+      // Timer-triggered meeting: timer already hit zero, ensure clients are stopped
+      io.to(roomId).emit('timer_sync', { phase: 'game', endsAt: Date.now() });
     }
 
     const trigger = room.players.find((p) => p.id === socket.id);
@@ -273,8 +300,6 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
       triggeredBy: trigger?.username ?? 'UNKNOWN',
       manualMeetingUsedThisRound: room.manualMeetingUsedThisRound,
     });
-    // Signal clients to stop their game timer immediately
-    io.to(roomId).emit('timer_sync', { phase: 'game', endsAt: Date.now() });
 
     // Start ejection vote timeout
     ejectionVoteTimers.set(roomId, setTimeout(() => finaliseEjectionVote(io, roomId), EJECTION_VOTE_TIMEOUT_MS));
@@ -322,10 +347,10 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
       updated.engineerTaskIds = pickTaskIds(updated.category, 'engineer', 10);
       updated.internTaskIds   = updated.engineerTaskIds;
       const gameTimerEndsAt = Date.now() + ROLE_REVEAL_DELAY_MS + GAME_TIMER_MS;
-      const roleResult = assignRoles(roomId);
-      if (!roleResult) return;
-      const internId = roleResult.internId;
-      updated.players.forEach((p) => {
+      updated.gameTimerEndsAt = gameTimerEndsAt;
+      // Roles stay the same — internId was assigned at game start and never changes.
+      const internId = updated.internId;
+      updated.players.filter((p) => p.alive).forEach((p) => {
         const role: 'engineer' | 'intern' = p.id === internId ? 'intern' : 'engineer';
         io.to(p.id).emit('role_assigned', { role, round: updated.round, taskIds: updated.engineerTaskIds, gameTimerEndsAt });
       });
@@ -337,6 +362,7 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
         category: updated.category,
         taskIds: updated.engineerTaskIds,
         gameTimerEndsAt,
+        completedTaskIds: updated.completedTaskIds,
       });
     }
   });
@@ -361,6 +387,10 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
     if (!room) return;
     const player = room.players.find((p) => p.id === socket.id);
     if (!player) return;
+    // Track the completed task ID if not already tracked
+    if (!room.completedTaskIds.includes(taskId)) {
+      room.completedTaskIds.push(taskId);
+    }
     // Broadcast to ALL players in the room (including sender) so everyone marks it done
     io.to(roomId).emit('task_completion_broadcast', {
       taskId,

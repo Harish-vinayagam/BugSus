@@ -101,6 +101,13 @@ const Index = () => {
     }
   }, [room.gameOver, navigateTo]);
 
+  // Return to game after manual meeting ends
+  useEffect(() => {
+    if (room.gamePhase === 'game' && screen === 'meeting') {
+      navigateTo('game');
+    }
+  }, [room.gamePhase, screen, navigateTo]);
+
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleBootSelect = useCallback((mode: 'create' | 'join') => {
@@ -155,18 +162,30 @@ const Index = () => {
   const handleMeetingComplete = useCallback(() => {
     if (room.gameOver) {
       navigateTo('final');
-    } else {
-      navigateTo('summary');
+      return;
     }
+
+    // Both manual and timer meetings show summary first
+    // Manual meeting will go back to 'game' after summary
+    // Timer meeting will advance to next round
+    navigateTo('summary');
   }, [room.gameOver, navigateTo]);
 
-  // Summary countdown done — server will fire role_assigned shortly after,
-  // which flips gamePhase → role_reveal and our useEffect navigates to 'role'.
-  // Just clear the snapshot so the summary unmounts cleanly.
+  // Summary screen complete
+  // If manual meeting: go back to game to resume the round
+  // If timer meeting: wait for next_round_started from server (which triggers role_reveal)
   const handleSummaryComplete = useCallback(() => {
     setSummaryVoteResult(null);
-    // Navigation handled by the role_reveal useEffect above
-  }, []);
+    
+    // Manual meeting after summary → return to game with preserved progress
+    if (summaryVoteResult?.wasManualMeeting) {
+      navigateTo('game');
+      return;
+    }
+    
+    // Timer-triggered meeting → wait for next_round_started event
+    // The role_reveal useEffect will handle navigation when gamePhase changes
+  }, [summaryVoteResult, navigateTo]);
 
   const handlePlayAgain = useCallback(() => {
     room.disconnect();

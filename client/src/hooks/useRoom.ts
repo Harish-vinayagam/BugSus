@@ -161,7 +161,13 @@ export const useRoom = (): UseRoomReturn => {
         setPlayers((prev) =>
           prev.map((pl) => ({ ...pl, alive: p.alivePlayers.some((a) => a.id === pl.id) }))
         );
-        setGamePhase('summary');
+        // If this was a manual meeting, stay in game phase
+        // If it was a timer meeting, go to summary
+        if (p.wasManualMeeting) {
+          setGamePhase('game');
+        } else {
+          setGamePhase('summary');
+        }
       },
       onTaskProgressUpdate: (p: TaskProgressUpdatePayload) =>
         setTaskProgress((prev) => ({ ...prev, [p.username]: p.count })),
@@ -174,7 +180,8 @@ export const useRoom = (): UseRoomReturn => {
         setVoteResult(null); setEjectionVotes({});
         setSharedCode(''); setSharedCodeTaskId(''); setSharedCodeSender('');
         setManualMeetingUsedThisRound(false);  // reset for new round
-        // DO NOT clear completedTaskIds — carry forward
+        // DO NOT clear completedTaskIds — use the accumulated list from server
+        setCompletedTaskIds(p.completedTaskIds);
         setChatMessages([]);
         // Skip category vote; role_assigned will follow immediately from server
         setGamePhase('role_reveal');

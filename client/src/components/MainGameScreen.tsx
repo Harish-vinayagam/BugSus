@@ -239,7 +239,7 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
         </span>
         <button
           disabled={manualMeetingUsedThisRound}
-          className={`crt-button crt-button-red text-xs px-3 py-1 ${manualMeetingUsedThisRound ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`crt-button crt-button-red text-xs px-3 py-1 transition-all ${manualMeetingUsedThisRound ? 'opacity-60 cursor-not-allowed text-[var(--crt-dim)]' : ''}`}
           onClick={onEmergency}
           title={manualMeetingUsedThisRound ? 'Emergency meeting already used this round' : 'Call an emergency meeting'}
         >

@@ -99,6 +99,7 @@ export interface VoteResultPayload {
   ejectedWasIntern: boolean;
   internUsername: string;
   alivePlayers: Player[];
+  wasManualMeeting?: boolean;  // if true, return to game; if false or timer, go to summary
 }
 
 export interface TaskProgressUpdatePayload {
@@ -120,6 +121,7 @@ export interface NextRoundStartedPayload {
   category: string;             // same category carried forward
   taskIds: string[];            // fresh task list for the round
   gameTimerEndsAt: number;      // server epoch-ms when this round's coding phase ends
+  completedTaskIds: string[];   // tasks already completed across all rounds so far
 }
 
 export interface CodeSyncedPayload {

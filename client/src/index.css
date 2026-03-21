@@ -283,14 +283,18 @@
 }
 
 .crt-button:disabled {
-  opacity: 0.3;
+  opacity: 0.4;
   cursor: not-allowed;
+  color: var(--crt-dim) !important;
+  border-color: var(--crt-dim) !important;
+  text-shadow: none !important;
+  background: rgba(31, 143, 31, 0.08) !important;
 }
 
 .crt-button:disabled:hover {
-  background: transparent;
-  border-color: var(--crt-dim);
-  box-shadow: none;
+  background: rgba(31, 143, 31, 0.08) !important;
+  border-color: var(--crt-dim) !important;
+  box-shadow: none !important;
 }
 
 .crt-button-red {

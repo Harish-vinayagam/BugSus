@@ -27,10 +27,15 @@ const makeRoom = (hostPlayer: Player, maxPlayers: number): Room => ({
   categoryVotes: {},
   ejectionVotes: {},
   tasksCompleted: {},
+  completedTaskIds: [],
   winner: null,
   engineerTaskIds: [],
   internTaskIds: [],
   manualMeetingUsedThisRound: false,
+  currentMeetingIsTimer: false,
+  gameTimerEndsAtWhenMeetingStarted: 0,
+  gameTimerEndsAt: 0,
+  pausedGameRemainingMs: 0,
 });
 
 // ── CRUD ──────────────────────────────────────────────────────────────────────
@@ -218,6 +223,11 @@ export const advanceRound = (roomId: string): Room | null => {
   room.engineerTaskIds = [];
   room.internTaskIds = [];
   room.manualMeetingUsedThisRound = false;  // reset for new round
+  room.currentMeetingIsTimer = false;
+  room.gameTimerEndsAtWhenMeetingStarted = 0;
+  room.gameTimerEndsAt = 0;
+  room.pausedGameRemainingMs = 0;
+  // DO NOT reset completedTaskIds — carry forward across all rounds
   return room;
 };
 
