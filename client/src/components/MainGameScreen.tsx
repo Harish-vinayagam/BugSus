@@ -61,15 +61,22 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   const [localCompletedIds, setLocalCompletedIds] = useState<string[]>([]);
   const completedTaskIds = Array.from(new Set([...localCompletedIds, ...remoteCompletedIds]));
 
-  // Start at the first task not yet completed (so returning players don't repeat done work)
-  const firstIncompleteIdx = tasks.findIndex((t) => !remoteCompletedIds.includes(t.id));
+  // Per-task editor code — preserves work-in-progress when switching between tasks
+  const [taskCodeMap, setTaskCodeMap] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    tasks.forEach((t) => { map[t.id] = t.starterCode; });
+    return map;
+  });
+
+  // Free selection: player can click any task, not sequential
+  const firstIncompleteIdx = tasks.findIndex((t) => !completedTaskIds.includes(t.id));
   const [currentTaskIdx, setCurrentTaskIdx] = useState(() =>
     firstIncompleteIdx >= 0 ? firstIncompleteIdx : 0
   );
   const currentTask: Task | null = tasks[currentTaskIdx] ?? null;
 
   const [editorCode, setEditorCode] = useState<string>(
-    () => tasks[0]?.starterCode ?? ''
+    () => currentTask ? (taskCodeMap[currentTask.id] ?? currentTask.starterCode) : ''
   );
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [testResults, setTestResults] = useState<TestResult[]>([]);
@@ -86,51 +93,40 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
     // Only apply if the incoming change is for the task we're currently on
     if (sharedCodeTaskId === currentTask.id) {
       setEditorCode(sharedCode);
+      setTaskCodeMap((prev) => ({ ...prev, [currentTask.id]: sharedCode }));
     }
   }, [sharedCode, sharedCodeTaskId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // When the task list changes (new round with fresh tasks), reset editor state
   // but preserve completed IDs — they carry forward across rounds.
   useEffect(() => {
+    const map: Record<string, string> = {};
+    tasks.forEach((t) => { map[t.id] = t.starterCode; });
+    setTaskCodeMap(map);
     const firstOpen = tasks.findIndex((t) => !remoteCompletedIds.includes(t.id));
     const startIdx = firstOpen >= 0 ? firstOpen : 0;
     setCurrentTaskIdx(startIdx);
     setEditorCode(tasks[startIdx]?.starterCode ?? '');
     setSubmitStatus('idle');
     setTestResults([]);
-    // Do NOT reset localCompletedIds — carry them forward
   }, [tasks]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-advance when another player completes the task we're currently on
-  useEffect(() => {
-    if (!currentTask) return;
-    if (remoteCompletedIds.includes(currentTask.id) && !localCompletedIds.includes(currentTask.id)) {
-      // Mark locally so the done count stays consistent, then move on
-      setLocalCompletedIds((prev) => prev.includes(currentTask.id) ? prev : [...prev, currentTask.id]);
-      setTimeout(() => {
-        setCurrentTaskIdx((idx) => {
-          const next = idx + 1;
-          if (next < tasks.length) {
-            setEditorCode(tasks[next].starterCode);
-          }
-          return next;
-        });
-        setSubmitStatus('idle');
-        setTestResults([]);
-      }, 800);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remoteCompletedIds]);
-
-  // Sync editor when navigating to a different task
-  useEffect(() => {
+  // Navigate to a task by clicking on it in the sidebar
+  const selectTask = useCallback((idx: number) => {
+    // Save current work before switching
     if (currentTask) {
-      setEditorCode(currentTask.starterCode);
-      setSubmitStatus('idle');
-      setTestResults([]);
+      setTaskCodeMap((prev) => ({ ...prev, [currentTask.id]: editorCode }));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTaskIdx]);
+    const target = tasks[idx];
+    if (!target) return;
+    setCurrentTaskIdx(idx);
+    setEditorCode((prev) => {
+      // Use saved code if it exists, otherwise starter code
+      return taskCodeMap[target.id] ?? target.starterCode;
+    });
+    setSubmitStatus('idle');
+    setTestResults([]);
+  }, [currentTask, editorCode, tasks, taskCodeMap]);
 
   // ── Timer — wall-clock driven so all clients stay in sync ──────────────────
   // Re-seed whenever the server provides a new deadline
@@ -165,8 +161,9 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
     setEditorCode(value);
     setSubmitStatus('idle');
     setTestResults([]);
-    // Debounce broadcast — send after 200ms of no typing to avoid spamming
+    // Persist work-in-progress to per-task map
     if (currentTask) {
+      setTaskCodeMap((prev) => ({ ...prev, [currentTask.id]: value }));
       clearTimeout(broadcastDebounce.current);
       broadcastDebounce.current = setTimeout(() => {
         onCodeChange(value, currentTask.id);
@@ -176,6 +173,7 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
 
   const handleSubmit = useCallback(() => {
     if (!currentTask) return;
+    if (completedTaskIds.includes(currentTask.id)) return; // already done
 
     setSubmitStatus('running');
     setTestResults([]);
@@ -195,13 +193,13 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
         onTaskCompleted(taskId);
         onTasksCompleted(completedTaskIds.length + 1);
 
+        // After a brief delay, auto-jump to the next incomplete task
         setTimeout(() => {
-          const nextIdx = currentTaskIdx + 1;
-          if (nextIdx < tasks.length) {
-            setCurrentTaskIdx(nextIdx);
-            setEditorCode(tasks[nextIdx].starterCode);
-          } else {
-            setCurrentTaskIdx(tasks.length); // signals all done
+          const nextIncomplete = tasks.findIndex(
+            (t, i) => i !== currentTaskIdx && !completedTaskIds.includes(t.id) && t.id !== taskId
+          );
+          if (nextIncomplete >= 0) {
+            selectTask(nextIncomplete);
           }
           setSubmitStatus('idle');
           setTestResults([]);
@@ -210,7 +208,7 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
         setSubmitStatus('incorrect');
       }
     }, 120);
-  }, [currentTask, editorCode, completedTaskIds, currentTaskIdx, tasks, onTaskCompleted, onTasksCompleted]);
+  }, [currentTask, editorCode, completedTaskIds, currentTaskIdx, tasks, onTaskCompleted, onTasksCompleted, selectTask]);
 
   const handleChatSend = useCallback(() => {
     if (!chatInput.trim()) return;
@@ -219,7 +217,7 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   }, [chatInput, onChatSend]);
 
   // ── Derived ─────────────────────────────────────────────────────────────────
-  const allTasksDone = currentTaskIdx >= tasks.length && tasks.length > 0;
+  const allTasksDone = tasks.length > 0 && tasks.every((t) => completedTaskIds.includes(t.id));
   const isIntern = role === 'intern';
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -307,18 +305,23 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
               const activeColor = 'var(--crt-accent)';
               const doneColor = 'var(--crt-green)';
               return (
-                <div key={t.id} className="flex items-center gap-1 py-0.5">
+                <div
+                  key={t.id}
+                  className="flex items-center gap-1 py-0.5"
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                  onClick={() => selectTask(i)}
+                  title={`${done ? '✓ ' : ''}${t.title} — click to open`}
+                >
                   <span style={{ color: done ? doneColor : active ? activeColor : 'var(--crt-dim)' }}>
                     {done ? '[✓]' : active ? '[▶]' : '[ ]'}
                   </span>
                   <span
                     className="truncate"
                     style={{
-                      color: done ? 'var(--crt-dim)' : active ? activeColor : 'var(--crt-dim)',
+                      color: done ? doneColor : active ? activeColor : 'var(--crt-dim)',
                       textDecoration: done ? 'line-through' : 'none',
                       maxWidth: '110px',
                     }}
-                    title={t.title}
                   >
                     {t.title}
                   </span>
@@ -356,6 +359,9 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
                 <div className="flex items-center justify-between mb-1">
                   <p className="font-terminal text-base crt-glow-accent">
                     {currentTask?.title}
+                    {currentTask && completedTaskIds.includes(currentTask.id) && (
+                      <span className="ml-2 text-xs" style={{ color: 'var(--crt-green)' }}>✓ COMPLETED</span>
+                    )}
                   </p>
                   <span className="text-xs" style={{ color: 'var(--crt-dim)' }}>{completedTaskIds.length}/{tasks.length} COMPLETE</span>
                 </div>
@@ -386,9 +392,13 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
                 <button
                   className="crt-button crt-button-accent px-4 py-1 text-sm"
                   onClick={handleSubmit}
-                  disabled={submitStatus === 'running' || submitStatus === 'correct'}
+                  disabled={submitStatus === 'running' || submitStatus === 'correct' || (currentTask != null && completedTaskIds.includes(currentTask.id))}
                 >
-                  {submitStatus === 'running' ? '⟳ RUNNING...' : '▶ SUBMIT'}
+                  {currentTask && completedTaskIds.includes(currentTask.id)
+                    ? '✓ COMPLETED'
+                    : submitStatus === 'running'
+                      ? '⟳ RUNNING...'
+                      : '▶ SUBMIT'}
                 </button>
                 {submitStatus === 'correct' && (
                   <span className="text-sm font-terminal crt-glow-accent">

@@ -177,7 +177,6 @@ const finaliseEjectionVote = (io: GameServer, roomId: string) => {
       io.to(roomId).emit('next_round_started', {
         round: updatedRoom.round,
         players: updatedRoom.players,
-        // No category vote this round — categoryVoteEndsAt = 0 signals skip
         categoryVoteEndsAt: 0,
         category: updatedRoom.category,
         taskIds: updatedRoom.engineerTaskIds,
