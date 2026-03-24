@@ -1,14 +1,43 @@
-#  BugSus
+<div align="center">
 
-> *A multiplayer social-deduction coding game with a retro CRT terminal aesthetic.*
+# 🐛 BugSus
 
-One player is secretly the **Intern** — their job is to deploy subtly broken code while blending in with the engineering team. Everyone else is an **Engineer** trying to complete legitimate tasks and identify who's sabotaging the codebase before it's too late.
+**A multiplayer social-deduction game for programmers.**
+
+*One player is secretly the **Intern** — deploying subtly broken code while blending in with the engineering team. Everyone else is an **Engineer** racing to ship legitimate features and identify the saboteur before it's too late.*
+
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
+[![Socket.IO](https://img.shields.io/badge/Socket.IO-4-010101?logo=socketdotio&logoColor=white)](https://socket.io)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed-Vercel-000?logo=vercel&logoColor=white)](https://vercel.com)
+
+</div>
+
+---
+
+## 🎬 Intro
+
+![BugSus walkthrough](assets/intro_walkthrough.webp)
+
+> *Seamless CRT phosphor boot animation → multiplayer lobby → live code editor with real test cases.*
 
 ---
 
 ## 📸 Screenshots
 
-coming soon
+<table>
+  <tr>
+    <td align="center"><b>Boot Screen</b></td>
+    <td align="center"><b>Create Room</b></td>
+    <td align="center"><b>Join Room</b></td>
+  </tr>
+  <tr>
+    <td><img src="assets/boot_screen.png" alt="Boot Screen" width="400"/></td>
+    <td><img src="assets/create_room.png" alt="Create Room" width="400"/></td>
+    <td><img src="assets/join_room.png" alt="Join Room" width="400"/></td>
+  </tr>
+</table>
 
 ---
 
@@ -16,37 +45,49 @@ coming soon
 
 ### Roles
 
-| Role | Goal | Tasks |
-|------|------|-------|
-| **Engineer** (75% chance) | Complete coding tasks. Find and eject the Intern. | Write correct, passing code |
-| **Intern** (25% chance) | Deploy sabotaged code without being caught. Survive 3 rounds. | Write *intentionally broken* code that passes its fake tests |
+| Role | Probability | Goal | Objective |
+|------|-------------|------|-----------|
+| 🔧 **Engineer** | 75% | Identify and eject the Intern | Complete coding tasks correctly |
+| 🐛 **Intern** | 25% | Survive all 3 rounds undetected | Deploy subtly broken code |
 
 ### Game Flow
 
 ```
-Boot → Lobby → [Category Vote] → Role Reveal → Game Round
-                     ↑                              ↓
-              Round Summary ←── Meeting ←── Emergency Meeting
-                     ↓
-              (repeat up to 3 rounds)
-                     ↓
-                 Final Screen
+Boot Screen
+    │
+    ├─ [CREATE_ROOM] ──┐
+    └─ [JOIN_ROOM]  ───┴─→ Lobby
+                               │
+                        Category Vote (15s)
+                        (FRONTEND / BACKEND / OOPS / DSA)
+                               │
+                          Role Reveal
+                               │
+                          Game Round (3 min)
+                          ┌────┴────────────────────┐
+                          │  Monaco Code Editor      │
+                          │  Live Test Cases         │
+                          │  In-Game Chat            │
+                          └────┬────────────────────┘
+                               │
+                   ┌───── Emergency Meeting ←── timer / button
+                   │           │
+                   │         Vote (20s) → Ejection Reveal
+                   │           │
+                   │      Round Summary
+                   │     ╔════════╗
+                   └────►║ Repeat ║ up to 3 rounds
+                         ╚════════╝
+                               │
+                          Final Screen
 ```
-
-1. **Category Vote** — All players vote on a coding category: `FRONTEND`, `BACKEND`, `OOPS`, or `DSA`. Majority wins. Timer: 15s.
-2. **Role Reveal** — Your secret role is revealed. Engineers see 🔧, Interns see 🐛. Your role is locked for the entire game.
-3. **Game Round** — 3 minutes to complete as many tasks as possible in the Monaco code editor. Run your code against live test cases.
-4. **Emergency Meeting** — Triggered by a player pressing `⚠ EMERGENCY_MEETING` or by the round timer expiring.
-5. **Vote** — 20 seconds to discuss (via in-game chat) and vote to eject a suspect. Live vote tallies shown.
-6. **Round Summary** — Debrief screen showing ejection result, task progress, and crew status. Then the next round begins with a fresh category vote.
-7. **End Conditions** — See Win Conditions below.
 
 ### Win Conditions
 
 | Condition | Winner |
 |-----------|--------|
-| Intern is ejected | **Engineers** 🏆 |
-| Engineers ejected down to ≤1 remaining | **Intern** 🏆 |
+| Intern is successfully ejected | **Engineers** 🏆 |
+| Engineers are reduced to ≤ 1 remaining | **Intern** 🏆 |
 | Intern survives all 3 rounds | **Intern** 🏆 |
 
 ---
@@ -67,13 +108,15 @@ Functional programming and server-side patterns — `compose`, `pipe`, `curry`, 
 ### OOPS
 Object-oriented design patterns — `Animal` inheritance, `Stack`, `Queue`, `Singleton`, `Observer`, `LinkedList`, mixins, decorators, and more.
 
-### Sabotage Tasks (Intern only)
+### 🕵️ Sabotage Tasks (Intern only)
 Each category has 5 matching sabotage tasks. These are subtly wrong implementations designed to corrupt the codebase:
 
-- **DSA** — `corruptSort`, off-by-one `twoSum`, fence-post `fibonacci`, etc.
-- **FRONTEND** — inverted `clamp`, undercut `truncate`, poisoned query parser, etc.
-- **BACKEND** — short-circuiting `pipe`, double-firing `EventEmitter`, LRU evicting newest, etc.
-- **OOPS** — mismatched `speak()`, stack `pop()` returns wrong item, singleton that resets every 3rd call, etc.
+| Category | Example Sabotage |
+|----------|-----------------|
+| **DSA** | Off-by-one `twoSum`, fence-post `fibonacci`, corrupt sort order |
+| **FRONTEND** | Inverted `clamp`, undercut `truncate`, poisoned query parser |
+| **BACKEND** | Short-circuiting `pipe`, double-firing `EventEmitter`, LRU evicting newest |
+| **OOPS** | Mismatched `speak()`, `Stack.pop()` returns wrong item, Singleton that resets every 3rd call |
 
 ---
 
@@ -81,14 +124,17 @@ Each category has 5 matching sabotage tasks. These are subtly wrong implementati
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | [React 18](https://react.dev) + [TypeScript 5](https://www.typescriptlang.org/) |
-| Build Tool | [Vite 5](https://vitejs.dev) |
-| Styling | [Tailwind CSS 3](https://tailwindcss.com) |
-| Code Editor | [Monaco Editor](https://microsoft.github.io/monaco-editor/) via `@monaco-editor/react` |
-| UI Primitives | [Radix UI](https://www.radix-ui.com/) |
-| Fonts | [VT323](https://fonts.google.com/specimen/VT323) · [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono) (Google Fonts) |
-| Testing | [Vitest](https://vitest.dev) + [Testing Library](https://testing-library.com/) |
-| Code Execution | `new Function()` in-browser sandbox |
+| **Framework** | [React 18](https://react.dev) + [TypeScript 5](https://www.typescriptlang.org/) |
+| **Build Tool** | [Vite 5](https://vitejs.dev) |
+| **Realtime** | [Socket.IO 4](https://socket.io) (client + server) |
+| **Styling** | [Tailwind CSS 3](https://tailwindcss.com) |
+| **Code Editor** | [Monaco Editor](https://microsoft.github.io/monaco-editor/) via `@monaco-editor/react` |
+| **UI Primitives** | [Radix UI](https://www.radix-ui.com/) |
+| **Fonts** | [VT323](https://fonts.google.com/specimen/VT323) · [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono) (Google Fonts) |
+| **Testing** | [Vitest](https://vitest.dev) + [Testing Library](https://testing-library.com/) |
+| **Code Execution** | `new Function()` in-browser sandbox |
+| **Backend Host** | [Render](https://render.com) |
+| **Frontend Host** | [Vercel](https://vercel.com) |
 
 ---
 
@@ -97,32 +143,38 @@ Each category has 5 matching sabotage tasks. These are subtly wrong implementati
 ```
 BugSus/
 ├── readme.md
-└── client/                        # Vite + React frontend
+├── vercel.json
+├── client/                            # Vite + React frontend
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── BootScreen.tsx         # Title / mode-select screen
+│   │   │   ├── CRTFrame.tsx           # Scanlines, vignette, grain overlay
+│   │   │   ├── CRTIntro.tsx           # Phosphor tube power-on animation
+│   │   │   ├── CRTTransition.tsx      # Screen-to-screen wipe transitions
+│   │   │   ├── CategoryVoteScreen.tsx # Live vote bars, 15s timer
+│   │   │   ├── RoleRevealScreen.tsx   # Glitch → role reveal
+│   │   │   ├── MainGameScreen.tsx     # 3-col layout: crew | editor | comms
+│   │   │   ├── EmergencyScreen.tsx    # Dramatic interstitial with countdown
+│   │   │   ├── MeetingScreen.tsx      # Vote UI with live tally + ejection reveal
+│   │   │   ├── RoundSummaryScreen.tsx # Post-round debrief with stats
+│   │   │   ├── FinalScreen.tsx        # Win/loss screen with intern identity reveal
+│   │   │   ├── CreateJoinScreen.tsx   # Name + room code entry
+│   │   │   ├── LobbyScreen.tsx        # Waiting room
+│   │   │   └── editor/
+│   │   │       └── CodeEditor.tsx     # Monaco editor wrapper
+│   │   ├── data/
+│   │   │   └── tasks.ts               # 68 tasks (48 engineer + 20 intern sabotage)
+│   │   ├── types/
+│   │   │   ├── task.ts                # Task, TestCase, TaskCategory types
+│   │   │   └── game.ts                # Full game state types
+│   │   ├── utils/
+│   │   │   └── validateTask.ts        # new Function() executor + deepEqual
+│   │   └── pages/
+│   │       └── Index.tsx              # Root game state machine (11 screens)
+│   └── package.json
+└── server/                            # Socket.IO Node backend
     └── src/
-        ├── components/
-        │   ├── BootScreen.tsx         # Title / mode-select screen
-        │   ├── CRTFrame.tsx           # Scanlines, vignette, grain overlay
-        │   ├── CRTIntro.tsx           # Phosphor tube power-on animation
-        │   ├── CategoryVoteScreen.tsx # Live vote bars, 15s timer
-        │   ├── RoleRevealScreen.tsx   # Glitch → role reveal
-        │   ├── MainGameScreen.tsx     # 3-col layout: crew | editor | comms
-        │   ├── EmergencyScreen.tsx    # Dramatic interstitial with countdown
-        │   ├── MeetingScreen.tsx      # Vote UI with live tally + ejection reveal
-        │   ├── RoundSummaryScreen.tsx # Post-round debrief with stats
-        │   ├── FinalScreen.tsx        # Win/loss screen with intern identity reveal
-        │   ├── CreateJoinScreen.tsx   # Name + room code entry
-        │   ├── LobbyScreen.tsx        # Waiting room
-        │   └── editor/
-        │       └── CodeEditor.tsx     # Monaco editor wrapper
-        ├── data/
-        │   └── tasks.ts               # 68 tasks (48 engineer + 20 intern sabotage)
-        ├── types/
-        │   ├── task.ts                # Task, TestCase, TaskCategory types
-        │   └── game.ts                # Game state types
-        ├── utils/
-        │   └── validateTask.ts        # new Function() executor + deepEqual
-        └── pages/
-            └── Index.tsx              # Root game state machine (11 screens)
+        └── index.ts                   # Room management + event bus
 ```
 
 ---
@@ -132,7 +184,7 @@ BugSus/
 ### Prerequisites
 - [Node.js](https://nodejs.org/) v18+ (or [Bun](https://bun.sh/))
 
-### Install & Run
+### Install & Run (Frontend)
 
 ```bash
 # Clone the repo
@@ -148,6 +200,20 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
+### Install & Run (Backend)
+
+```bash
+cd BugSus/server
+
+# Install dependencies
+npm install
+
+# Start the server (default port 3001)
+npm run dev
+```
+
+> The client's `.env` points to `https://bugsus.onrender.com` by default. To use your own local server, update `VITE_SERVER_URL` in `client/.env`.
+
 ### Other Commands
 
 ```bash
@@ -162,7 +228,7 @@ npm run lint        # ESLint
 
 ## ▲ Deploying to Vercel
 
-The app lives in the `client/` subdirectory. A `vercel.json` inside `client/` configures the build automatically.
+The frontend lives in the `client/` subdirectory. A `vercel.json` inside `client/` configures the build automatically.
 
 **Steps:**
 
@@ -227,14 +293,14 @@ The retro terminal look is achieved entirely with CSS:
 boot
  ├── create ──┐
  └── join ────┴─→ lobby → category → role → game
-                                              ↓
-                                    ┌── emergency
-                                    │       ↓
-                                    └──> meeting
-                                          ↓ (not final round, not game-over)
-                                        summary → category (next round)
-                                          ↓ (game-over)
-                                         final
+                                           ↓
+                                 ┌── emergency
+                                 │       ↓
+                                 └──> meeting
+                                       ↓ (not final round, not game-over)
+                                     summary → category (next round)
+                                       ↓ (game-over)
+                                      final
 ```
 
 ---
@@ -267,3 +333,13 @@ All tasks live in `client/src/data/tasks.ts`. Each task must satisfy the `Task` 
 For sabotage tasks (`forRole: 'intern'`), prefix the title with `[SABOTAGE]` and write a `DIRECTIVE:` description that explains what subtle bug to introduce.
 
 ---
+
+## 📄 License
+
+MIT — see [LICENSE](LICENSE) for details.
+
+---
+
+<div align="center">
+Made with 🐛 by <a href="https://github.com/Harish-vinayagam">Harish Vinayagam</a>
+</div>
