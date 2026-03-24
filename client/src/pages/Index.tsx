@@ -305,7 +305,9 @@ const Index = () => {
               triggeredBy={room.meetingTriggeredBy}
               ejectionVotes={room.ejectionVotes}
               voteResult={room.voteResult}
+              chatMessages={room.chatMessages}
               onCastVote={room.castEjectionVote}
+              onChatSend={room.sendChat}
               onComplete={handleMeetingComplete}
             />
           )}
