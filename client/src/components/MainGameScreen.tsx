@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { usePageVisibility } from '@/hooks/usePageVisibility';
 import type { Task } from '@/types/task';
 import { validateTask, type TestResult } from '@/utils/validateTask';
 import CodeEditor from '@/components/editor/CodeEditor';
@@ -133,6 +134,20 @@ const MainGameScreen: React.FC<MainGameScreenProps> = ({
   useEffect(() => {
     setTimer(Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000)));
   }, [timerEndsAt]);
+
+  // Handle page visibility to prevent timer freeze
+  usePageVisibility(
+    () => {
+      console.log('[MainGameScreen] tab hidden — timer paused');
+    },
+    () => {
+      console.log('[MainGameScreen] tab visible — timer resumed');
+      // Resync timer with server deadline when tab becomes visible
+      if (timerEndsAt > 0) {
+        setTimer(Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000)));
+      }
+    }
+  );
 
   useEffect(() => {
     if (timerEndsAt === 0) return;

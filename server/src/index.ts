@@ -33,6 +33,12 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
     methods: ['GET', 'POST'],
     credentials: true,
   },
+  // Optimize for production/cold starts
+  pingInterval: 25_000,      // send ping every 25s
+  pingTimeout: 60_000,       // wait 60s for pong before disconnect (for cold starts)
+  transports: ['websocket', 'polling'], // try websocket first, fallback to polling
+  allowEIO3: true,           // support older Socket.IO clients
+  maxHttpBufferSize: 1e6,    // 1MB max message size
 });
 
 io.on('connection', (socket) => {
@@ -42,6 +48,11 @@ io.on('connection', (socket) => {
 
 // ── Start ────────────────────────────────────────────────────────────────────
 httpServer.listen(PORT, () => {
-  console.log(`BugSus server running on http://localhost:${PORT}`);
-  console.log(`Accepting connections from ${CLIENT_URL}`);
+  console.log(`✓ BugSus server running on port ${PORT}`);
+  console.log(`✓ Accepting connections from: ${CLIENT_URL}`);
+  console.log(`✓ Socket.IO configured with:
+  - pingInterval: 25s
+  - pingTimeout: 60s (allows cold starts)
+  - transports: websocket, polling
+  - maxHttpBufferSize: 1MB`);
 });

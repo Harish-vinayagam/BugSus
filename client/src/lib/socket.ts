@@ -32,12 +32,35 @@ const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? 'http://localhost:3001';
 // ── Socket singleton ─────────────────────────────────────────────────────────
 export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SERVER_URL, {
   autoConnect: false,
-  reconnectionAttempts: 10,
+  reconnectionAttempts: 15,        // try up to 15 reconnect attempts
   reconnectionDelay: 1000,
-  reconnectionDelayMax: 5000,
-  timeout: 20_000,
+  reconnectionDelayMax: 10_000,    // max delay between retries (increased from 5s)
+  timeout: 40_000,                 // 40s timeout (increased from 20s for cold starts)
   transports: ['websocket', 'polling'],
 });
+
+// ── Page visibility handler: resume socket when tab becomes visible ───────────
+let visibilityHandler: (() => void) | null = null;
+
+const setupVisibilityHandler = () => {
+  if (visibilityHandler) return; // already setup
+  
+  visibilityHandler = () => {
+    if (document.hidden) {
+      console.log('[socket] tab hidden — will reconnect when visible');
+    } else {
+      console.log('[socket] tab visible — reconnecting...');
+      // Reconnect if we were disconnected while hidden
+      if (!socket.connected) {
+        socket.connect();
+      }
+    }
+  };
+  
+  document.addEventListener('visibilitychange', visibilityHandler);
+};
+
+setupVisibilityHandler();
 
 // ── Pending-emit queue (module level — immune to React) ──────────────────────
 type PendingAction =

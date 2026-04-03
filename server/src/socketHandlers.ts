@@ -191,31 +191,37 @@ export const registerSocketHandlers = (io: GameServer, socket: GameSocket): void
 
   // ── create_room ────────────────────────────────────────────────────────────
   socket.on('create_room', ({ username, maxPlayers }) => {
+    console.log(`[create_room] 📍 ${socket.id.substring(0, 8)}... | ${username} (max ${maxPlayers})`);
     const player = { id: socket.id, username, alive: true };
     const room = createRoom(player, maxPlayers ?? 4);
     socket.join(room.roomId);
     socket.emit('room_created', { roomId: room.roomId, players: room.players, maxPlayers: room.maxPlayers });
-    console.log(`[create_room] ${username} → ${room.roomId} (max ${room.maxPlayers})`);
+    console.log(`[create_room] ✓ ${username} → ${room.roomId}`);
   });
 
   // ── join_room ──────────────────────────────────────────────────────────────
   socket.on('join_room', ({ roomId, username }) => {
+    console.log(`[join_room] 📍 ${socket.id.substring(0, 8)}... | ${username} → ${roomId}`);
     const player = { id: socket.id, username, alive: true };
     const room = joinRoom(roomId, player);
     if (!room) {
       // Check if room exists to give the right error
       const existing = getRoom(roomId);
       if (existing) {
-        socket.emit('room_error', { message: `Room "${roomId}" is full (${existing.maxPlayers}/${existing.maxPlayers}).` });
+        const errMsg = `Room "${roomId}" is full (${existing.maxPlayers}/${existing.maxPlayers}).`;
+        console.log(`[join_room] ✗ FULL | ${errMsg}`);
+        socket.emit('room_error', { message: errMsg });
       } else {
-        socket.emit('room_error', { message: `Room "${roomId}" not found.` });
+        const errMsg = `Room "${roomId}" not found.`;
+        console.log(`[join_room] ✗ NOT_FOUND | ${errMsg}`);
+        socket.emit('room_error', { message: errMsg });
       }
       return;
     }
     socket.join(room.roomId);
     socket.emit('room_joined', { roomId: room.roomId, players: room.players, maxPlayers: room.maxPlayers });
     socket.to(room.roomId).emit('player_list_update', { roomId: room.roomId, players: room.players });
-    console.log(`[join_room]   ${username} → ${room.roomId}`);
+    console.log(`[join_room] ✓ ${username} → ${room.roomId} (${room.players.length}/${room.maxPlayers})`);
   });
 
   // ── start_game ─────────────────────────────────────────────────────────────

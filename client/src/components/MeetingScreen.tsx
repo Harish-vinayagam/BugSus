@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { usePageVisibility } from '@/hooks/usePageVisibility';
 import type { Player, VoteResultPayload } from '../../../shared/types';
 
 interface MeetingScreenProps {
@@ -35,6 +36,17 @@ const MeetingScreen: React.FC<MeetingScreenProps> = ({
   useEffect(() => {
     chatRef.current?.scrollTo(0, chatRef.current.scrollHeight);
   }, [chatMessages]);
+
+  // Handle page visibility to prevent timer freeze
+  usePageVisibility(
+    () => {
+      console.log('[MeetingScreen] tab hidden — timer paused');
+    },
+    () => {
+      console.log('[MeetingScreen] tab visible — timer resumed');
+      // Timer will naturally resume on next interval tick
+    }
+  );
 
   // Visual countdown only — server owns the real deadline
   useEffect(() => {

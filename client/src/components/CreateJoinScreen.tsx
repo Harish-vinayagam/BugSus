@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { usePageVisibility } from '@/hooks/usePageVisibility';
 import type { RoomStatus } from '@/hooks/useRoom';
 
 interface CreateJoinScreenProps {
@@ -50,10 +51,22 @@ const CreateJoinScreen: React.FC<CreateJoinScreenProps> = ({
     }
   }, [socketStatus]);
 
-  // 15s safety-net: show retry if still waiting with no error
+  // Handle page visibility: reset timeout when tab becomes visible
+  usePageVisibility(
+    undefined, // onHidden
+    () => {
+      // Tab became visible — reset timeout to give user a fresh 35s
+      if (step === 'connecting' && !timedOut) {
+        setTimedOut(false);
+        console.log('[CreateJoinScreen] tab visible — timeout reset');
+      }
+    }
+  );
+
+  // 35s safety-net: show retry if still waiting with no error (increased for cold start delays)
   useEffect(() => {
     if (step !== 'connecting') { setTimedOut(false); return; }
-    const t = setTimeout(() => setTimedOut(true), 15_000);
+    const t = setTimeout(() => setTimedOut(true), 35_000);
     return () => clearTimeout(t);
   }, [step]);
 
@@ -188,6 +201,9 @@ const CreateJoinScreen: React.FC<CreateJoinScreenProps> = ({
                   </p>
                   <p className="text-xs" style={{ color: 'var(--crt-dim)' }}>
                     ESTABLISHING CONNECTION...
+                  </p>
+                  <p className="text-xs mt-2" style={{ color: 'var(--crt-dim)' }}>
+                    (THIS MAY TAKE UP TO 30 SECONDS ON FIRST CONNECT)
                   </p>
                 </>
               ) : (

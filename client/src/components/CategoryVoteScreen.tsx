@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { usePageVisibility } from '@/hooks/usePageVisibility';
 
 interface CategoryVoteScreenProps {
   round: number;
@@ -28,6 +29,20 @@ const CategoryVoteScreen: React.FC<CategoryVoteScreenProps> = ({
   useEffect(() => {
     setTimer(secondsLeft(timerEndsAt));
   }, [timerEndsAt]);
+
+  // Handle page visibility to prevent timer freeze
+  usePageVisibility(
+    () => {
+      console.log('[CategoryVoteScreen] tab hidden — timer paused');
+    },
+    () => {
+      console.log('[CategoryVoteScreen] tab visible — timer resumed');
+      // Resync timer with server deadline when tab becomes visible
+      if (timerEndsAt > 0) {
+        setTimer(secondsLeft(timerEndsAt));
+      }
+    }
+  );
 
   // Tick every second by recomputing from the absolute deadline
   useEffect(() => {

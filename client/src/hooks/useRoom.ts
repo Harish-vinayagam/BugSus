@@ -105,8 +105,16 @@ export const useRoom = (): UseRoomReturn => {
         setStatus((s) => (s === 'connecting' ? 'creating' : s));
       },
       onConnectError: (err) => {
-        setStatus('error');
-        setError('Could not reach server — ' + (err?.message ?? 'unknown'));
+        const errMsg = err?.message ?? 'unknown';
+        console.error('[useRoom] connect error:', errMsg);
+        // Don't immediately set error — let reconnect loop retry first
+        // This prevents "server is taking too long" from showing too early
+        if (status === 'connecting') {
+          // Still in initial connect, keep the status as-is
+        } else {
+          setStatus('error');
+          setError('Connection failed — ' + errMsg);
+        }
       },
       onDisconnect: () => {
         // keep existing status; reconnect loop will restore
