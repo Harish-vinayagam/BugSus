@@ -158,6 +158,20 @@ const BootScreen: React.FC<BootScreenProps> = ({ onSelect }) => {
           </div>
         )}
       </div>
+
+      {/* Star on GitHub button */}
+      <div className="fixed top-4 right-4">
+        <a
+          href="https://github.com/Harish-vinayagam/BugSus"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="crt-button inline-flex items-center gap-2 text-sm hover:opacity-80 transition-opacity"
+          style={{ padding: '0.5rem 1rem' }}
+        >
+          <span>⭐</span>
+          <span>STAR ON GITHUB</span>
+        </a>
+      </div>
     </div>
   );
 };
