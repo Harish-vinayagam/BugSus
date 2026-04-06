@@ -48,40 +48,46 @@ const BootScreen: React.FC<BootScreenProps> = ({ onSelect }) => {
   return (
     <div className="h-full flex flex-col justify-center font-mono">
       <div className="space-y-2">
-        {phase >= 0 && (
-          <TypingText
-            text="INITIALIZING BUGSUS..."
-            speed={50}
-            onComplete={() => setTimeout(() => setPhase(1), 500)}
-          />
+        {/* Loading animation - visible during loading (phases 0-3) */}
+        {phase < 4 && (
+          <>
+            {phase >= 0 && (
+              <TypingText
+                text="INITIALIZING BUGSUS..."
+                speed={50}
+                onComplete={() => setTimeout(() => setPhase(1), 500)}
+              />
+            )}
+            {phase >= 1 && (
+              <div>
+                <TypingText
+                  text="SYSTEM CHECK: OK"
+                  speed={30}
+                  onComplete={() => setTimeout(() => setPhase(2), 300)}
+                />
+              </div>
+            )}
+            {phase >= 2 && (
+              <div>
+                <TypingText
+                  text="LOADING MODULES..."
+                  speed={30}
+                  onComplete={() => setTimeout(() => setPhase(3), 400)}
+                />
+              </div>
+            )}
+            {phase >= 3 && (
+              <div className="mt-6">
+                <TypingText
+                  text="████████████████████████ 100%"
+                  speed={20}
+                  onComplete={() => setTimeout(() => setPhase(4), 300)}
+                />
+              </div>
+            )}
+          </>
         )}
-        {phase >= 1 && (
-          <div>
-            <TypingText
-              text="SYSTEM CHECK: OK"
-              speed={30}
-              onComplete={() => setTimeout(() => setPhase(2), 300)}
-            />
-          </div>
-        )}
-        {phase >= 2 && (
-          <div>
-            <TypingText
-              text="LOADING MODULES..."
-              speed={30}
-              onComplete={() => setTimeout(() => setPhase(3), 400)}
-            />
-          </div>
-        )}
-        {phase >= 3 && (
-          <div className="mt-6">
-            <TypingText
-              text="████████████████████████ 100%"
-              speed={20}
-              onComplete={() => setTimeout(() => setPhase(4), 300)}
-            />
-          </div>
-        )}
+        {/* Homepage - visible after loading (phase >= 4) */}
         {phase >= 4 && (
           <div className="mt-8 space-y-4">
             <pre className="crt-glow text-lg font-terminal leading-tight">
@@ -161,17 +167,17 @@ const BootScreen: React.FC<BootScreenProps> = ({ onSelect }) => {
 
       {/* Star on GitHub button */}
       <div className="fixed top-4 right-4">
-        <a
-          href="https://github.com/Harish-vinayagam/BugSus"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="crt-button inline-flex items-center gap-2 text-sm hover:opacity-80 transition-opacity"
-          style={{ padding: '0.5rem 1rem' }}
-        >
-          <span>⭐</span>
-          <span>STAR ON GITHUB</span>
-        </a>
-      </div>
+          <a
+            href="https://github.com/Harish-vinayagam/BugSus"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="crt-button inline-flex items-center gap-2 text-sm hover:opacity-80 transition-opacity"
+            style={{ padding: '0.5rem 1rem' }}
+          >
+            <span>☆</span>
+            <span>STAR ON GITHUB</span>
+          </a>
+        </div>
     </div>
   );
 };
