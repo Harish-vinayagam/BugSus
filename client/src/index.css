@@ -398,6 +398,27 @@
 }
 
 /* Static noise burst overlay during flicker */
+
+/* Floating note animation: gentle up/down float for UI elements */
+@keyframes float-anim {
+  0%   { transform: translateY(-6px); }
+  50%  { transform: translateY(6px); }
+  100% { transform: translateY(-6px); }
+}
+
+.float-anim {
+  animation: float-anim 4s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float-anim { animation: none; }
+}
+
+/* Strong black shadow for floating notes */
+.float-note-shadow {
+  box-shadow: 0 20px 40px rgba(0,0,0,0.75), 0 6px 12px rgba(0,0,0,0.55);
+}
 .crt-intro-static {
   position: absolute;
   inset: 0;
