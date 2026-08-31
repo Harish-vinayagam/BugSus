@@ -6,6 +6,7 @@ import BootScreen from '@/components/BootScreen';
 import CreateJoinScreen from '@/components/CreateJoinScreen';
 import LobbyScreen from '@/components/LobbyScreen';
 import CategoryVoteScreen from '@/components/CategoryVoteScreen';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import RoleRevealScreen from '@/components/RoleRevealScreen';
 import MainGameScreen from '@/components/MainGameScreen';
 import EmergencyScreen from '@/components/EmergencyScreen';
@@ -336,6 +337,16 @@ const Index = () => {
           )}
 
         </CRTTransition>
+          {/* Floating connection note shown on the main landing screens */}
+          {(screen === 'boot' || screen === 'create' || screen === 'join' || screen === 'lobby') && (
+            <div className="fixed right-6 top-1/2 z-50 -translate-y-1/2 float-anim float-note-shadow">
+              <Alert className="w-80">
+                <AlertDescription>
+                  If it takes more than 2 minutes to connect to the server or continuously shows "Connecting to server," try reloading the page.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
       </CRTFrame>
     </>
   );
